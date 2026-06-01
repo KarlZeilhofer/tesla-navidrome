@@ -15,6 +15,7 @@ import {
   SkipBack,
   SkipForward,
   Trash2,
+  X,
 } from "lucide-react"
 import "./styles.css"
 
@@ -115,6 +116,17 @@ function normalizeSong(song) {
   }
 }
 
+function normalizePlaylist(playlist) {
+  return {
+    id: playlist.id,
+    name: playlist.name || "Playlist",
+    songCount: playlist.songCount || 0,
+    duration: playlist.duration || 0,
+    coverArt: playlist.coverArt,
+    owner: playlist.owner || "",
+  }
+}
+
 function loadSavedState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")
@@ -148,6 +160,7 @@ function App() {
   const [auth, setAuth] = useState(authState)
   const [query, setQuery] = useState("")
   const [songs, setSongs] = useState([])
+  const [playlistResults, setPlaylistResults] = useState([])
   const [verlauf, setVerlauf] = useState(savedState?.verlauf || [])
   const [currentIndex, setCurrentIndex] = useState(savedState?.currentIndex ?? -1)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -232,22 +245,31 @@ function App() {
   useEffect(() => {
     if (!query.trim() || !canUseApi) {
       setSongs([])
+      setPlaylistResults([])
       return
     }
     const handle = window.setTimeout(async () => {
       try {
         setStatus("Suche...")
-        const data = await subsonic(
-          "search3",
-          {
-            query,
-            artistCount: 0,
-            albumCount: 4,
-            songCount: 40,
-          },
-          auth,
-        )
+        const [data, playlistData] = await Promise.all([
+          subsonic(
+            "search3",
+            {
+              query,
+              artistCount: 0,
+              albumCount: 4,
+              songCount: 40,
+            },
+            auth,
+          ),
+          subsonic("getPlaylists", {}, auth),
+        ])
         setSongs((data.searchResult3?.song || []).map(normalizeSong))
+        setPlaylistResults(
+          (playlistData.playlists?.playlist || [])
+            .map(normalizePlaylist)
+            .filter((playlist) => playlist.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())),
+        )
         setStatus("")
       } catch (err) {
         setStatus(err.message)
@@ -317,6 +339,7 @@ function App() {
   useEffect(() => {
     if (!streamUrl || !audioRef.current) return
     pendingSeekRef.current = currentSong?.id === savedState?.verlauf?.[savedState.currentIndex]?.id ? savedState.position : 0
+    audioRef.current.removeAttribute("poster")
     audioRef.current.src = streamUrl
     audioRef.current.play().catch((err) => {
       if (savedState?.wasPlaying) {
@@ -402,10 +425,35 @@ function App() {
     setStatus(`Zum Verlauf hinzugefuegt: ${song.title}`)
   }
 
+  function insertAfterCurrent(song) {
+    setVerlauf((items) => {
+      const index = currentIndex >= 0 ? currentIndex : -1
+      return [...items.slice(0, index + 1), song, ...items.slice(index + 1)]
+    })
+    if (currentIndex < 0) setCurrentIndex(0)
+    setStatus(`Nach aktuellem Song eingefuegt: ${song.title}`)
+  }
+
   function playAllResults() {
     if (!songs.length) return
     setVerlauf((items) => [...items.slice(0, currentIndex + 1), ...songs])
     setCurrentIndex((idx) => (idx < 0 ? 0 : idx + 1))
+  }
+
+  async function playPlaylist(playlist) {
+    try {
+      setStatus(`Lade Playlist: ${playlist.name}`)
+      const data = await subsonic("getPlaylist", { id: playlist.id }, auth)
+      const playlistSongs = (data.playlist?.entry || []).map(normalizeSong)
+      setSongs(playlistSongs)
+      if (playlistSongs.length) {
+        setVerlauf((items) => [...items.slice(0, currentIndex + 1), ...playlistSongs])
+        setCurrentIndex((idx) => (idx < 0 ? 0 : idx + 1))
+      }
+      setStatus("")
+    } catch (err) {
+      setStatus(err.message)
+    }
   }
 
   async function toggleStar() {
@@ -529,7 +577,9 @@ function App() {
     setAuth(authState())
     setVerlauf([])
     setSongs([])
+    setPlaylistResults([])
     setCurrentIndex(-1)
+    setMenu(null)
   }
 
   if (!auth.isAuthenticated || !canUseApi) {
@@ -597,25 +647,33 @@ function App() {
 
       <section className="searchBar">
         <Search size={30} />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Suche nach Titel, Album oder Artist" />
-        <button type="button" onClick={playAllResults}>Alle wiedergeben</button>
+        <div className="searchField">
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Suche nach Titel, Album, Artist oder Playlist" />
+          {query && (
+            <button type="button" onClick={() => setQuery("")} aria-label="Suche löschen">
+              <X size={28} />
+            </button>
+          )}
+        </div>
         <button type="button" onClick={randomPlay}>
           <Shuffle size={24} />
           Zufall
         </button>
-        <button className="secondaryButton" type="button" onClick={logout}>
-          <LogOut size={24} />
-          Logout
+        <button className="secondaryButton userButton" type="button" onClick={() => setMenu({ type: "user" })}>
+          {auth.username || auth.name}
         </button>
       </section>
 
       <section className="content">
         <div className="results">
-          <div className="sectionHeader">
+          <button className="sectionHeader buttonHeader" type="button" onClick={() => setMenu({ type: "results" })}>
             <h2>Treffer</h2>
-            <span>{status || `${songs.length} Songs`}</span>
-          </div>
+            <span>{status || `${songs.length} Songs / ${playlistResults.length} Playlists`}</span>
+          </button>
           <div className="songList">
+            {playlistResults.map((playlist) => (
+              <PlaylistRow key={playlist.id} playlist={playlist} auth={auth} onPlay={() => playPlaylist(playlist)} />
+            ))}
             {songs.map((song) => (
               <SongRow
                 key={song.id}
@@ -633,7 +691,7 @@ function App() {
         </div>
 
         <aside className="verlauf">
-          <button className="sectionHeader buttonHeader" type="button" onContextMenu={(event) => event.preventDefault()} onPointerDown={longPress(() => setMenu({ type: "verlauf" }))}>
+          <button className="sectionHeader buttonHeader" type="button" onClick={() => setMenu({ type: "verlauf" })}>
             <h2>Verlauf</h2>
             <span>
               {Math.max(0, currentIndex)} vergangen / {futureCount} danach
@@ -669,7 +727,7 @@ function App() {
           setNewPlaylistName={setNewPlaylistName}
           onClose={() => setMenu(null)}
           onInsertAfter={() => {
-            insertAndPlay(menu.song)
+            insertAfterCurrent(menu.song)
             setMenu(null)
           }}
           onAddPlaylist={(playlistId) => addSongToPlaylist(playlistId, menu.song.id)}
@@ -679,6 +737,8 @@ function App() {
           onRemove={() => removeFromVerlauf(menu.index)}
           onClear={clearVerlauf}
           onShuffle={shuffleVerlauf}
+          onPlayAllResults={playAllResults}
+          onLogout={logout}
         />
       )}
     </main>
@@ -706,7 +766,9 @@ function SongRow({ song, auth, onPlay, onQueue, onMenu }) {
         {coverUrl ? <img src={coverUrl} alt="" /> : <Play size={34} />}
       </button>
       <button className="songText" type="button" onClick={onPlay}>
-        <strong>{song.title}</strong>
+        <strong>
+          {song.starred && <Heart className="inlineHeart" size={20} fill="currentColor" />} {song.title}
+        </strong>
         <span>{song.artist}</span>
       </button>
       <button className="actionButton" type="button" onClick={onQueue}>
@@ -716,6 +778,25 @@ function SongRow({ song, auth, onPlay, onQueue, onMenu }) {
       <button className="actionButton" type="button" onClick={onMenu} onPointerDown={longPress(onMenu)}>
         <MoreVertical size={28} />
         Mehr
+      </button>
+    </article>
+  )
+}
+
+function PlaylistRow({ playlist, auth, onPlay }) {
+  const coverUrl = playlist.coverArt ? subsonicUrl("getCoverArt", { id: playlist.coverArt, size: 96, square: true }, auth) : ""
+  return (
+    <article className="songRow playlistRow">
+      <button className="coverButton" type="button" onClick={onPlay}>
+        {coverUrl ? <img src={coverUrl} alt="" /> : <ListMusic size={34} />}
+      </button>
+      <button className="songText" type="button" onClick={onPlay}>
+        <strong>{playlist.name}</strong>
+        <span>Playlist - {playlist.songCount} Songs</span>
+      </button>
+      <button className="actionButton wideAction" type="button" onClick={onPlay}>
+        <Play size={28} />
+        Wiedergeben
       </button>
     </article>
   )
@@ -735,6 +816,8 @@ function ActionMenu({
   onRemove,
   onClear,
   onShuffle,
+  onPlayAllResults,
+  onLogout,
 }) {
   const isSongMenu = menu.type === "song" || menu.type === "verlaufSong"
   return (
@@ -744,6 +827,15 @@ function ActionMenu({
           <h2>{isSongMenu ? menu.song.title : "Verlauf"}</h2>
           <button type="button" onClick={onClose}>Schliessen</button>
         </header>
+
+        {menu.type === "results" && <button type="button" onClick={onPlayAllResults}>Alle wiedergeben</button>}
+
+        {menu.type === "user" && (
+          <button type="button" onClick={onLogout}>
+            <LogOut size={28} />
+            Logout
+          </button>
+        )}
 
         {menu.type === "song" && <button type="button" onClick={onInsertAfter}>Einfügen nach aktuellem Song</button>}
 

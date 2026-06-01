@@ -165,7 +165,7 @@ input {
 .searchBar {
   height: 84px;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 180px 130px 130px;
+  grid-template-columns: 40px minmax(0, 1fr) 130px 140px;
   gap: 12px;
   align-items: center;
   padding: 12px 14px;
@@ -175,6 +175,16 @@ input {
 .searchBar input {
   width: 100%;
   padding: 0 18px;
+}
+
+.searchField {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 70px;
+  gap: 10px;
+}
+
+.searchField button {
+  min-width: 70px;
 }
 
 .searchBar button,
@@ -256,6 +266,10 @@ h3 {
   border-bottom: 1px solid var(--border);
 }
 
+.playlistRow {
+  background: color-mix(in srgb, var(--accent), transparent 93%);
+}
+
 .coverButton {
   min-width: 72px;
   width: 72px;
@@ -280,6 +294,19 @@ h3 {
 
 .actionButton {
   padding: 0 10px;
+}
+
+.wideAction {
+  grid-column: span 2;
+}
+
+.inlineHeart {
+  color: var(--liked);
+  vertical-align: -2px;
+}
+
+.userButton {
+  text-transform: none;
 }
 
 .verlaufItem {
@@ -384,6 +411,7 @@ h3 {
   margin-top: 10px;
   justify-content: flex-start;
   padding: 0 18px;
+  font-size: 25px;
 }
 
 .playlistBox {
@@ -424,7 +452,7 @@ h3 {
 
   .searchBar {
     height: 76px;
-    grid-template-columns: 34px minmax(0, 1fr) 160px 120px 120px;
+    grid-template-columns: 34px minmax(0, 1fr) 120px 120px;
     padding: 8px 12px;
   }
 
