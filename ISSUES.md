@@ -1,4 +1,4 @@
-# Issues
+# Issues TODO
 
 1. Auto continue, wenn app wieder gestartet wird (erneutes einsteigen in das fahzeug)
    Sobald der Browser wieder geöffnet wird, muss die Musik exakt dort fortgesetzt werden, wo sie aufgehört hat. 
@@ -39,3 +39,27 @@
     [Verlauf als Playlist speichern]
     [Verlauf würfeln] Dabei wird die aktuelle Verlauf gemischt, 
     und der aktuell abgespielte Song rutscht auf Platz 1. Damit die Wiedergabe nicht unterbrochen wird. 
+22. Suchfeld braucht rechts einen X-Button zum löschen der Eingabe
+23. Verlauf ist per se kein typischer Button, daher braucht es keinen long-press. Stelle den Titel "Verlauf"
+    als Button dar. Somit sollte sich der User gut zurecht finden. 
+23b. Treffer-Titel-Label wird zum Button. --> Untermenü
+24. Wie sagen dem Tesla-Browser offenbar, dass wir ein Video abspielen. Dadurch kommt oben 
+    im Broweser ein Hinweis, dass nur Audio abgespielt wird, Video nicht (während der Fahrt). 
+    Wir sollten den Browser nicht glauben lassen, dass wir ein Video abspielen, 
+    sondern ohnehin nur Audio. 
+25. Untermenüs brauchen auch Große Schrift für die Auswahlelemente. 
+26. Der Logoutbutton soll "karl" heißen, wenn das der eingeloggte User ist. 
+    Erst durch einen Klick darauf bekommt man ein Menü für Logout. 
+    Später werden wir hier weitere User auflisten, zu denen man schnell wechseln können wird. 
+27. Bei klick auf Mehr bei einem Song in der Trefferliste und der Auswahl
+    [Einfügen nach aktuellem Song] darf diesen nicht sofort spielen. der Bisherige
+    Song muss zuerst fertig gespielt haben. 
+28. Zustands-Icon muss für liked Songs dargestellt werden in der Trefferliste (read only)
+29. [Alle wiedergeben] soll in das Menü "Treffer". 
+30. Suche soll auch nach Playlists suchen. Wenn es eine Playlist "Party" gibt, und ich 
+    suche nach "Par", dann muss diese Playlist in den Treffer angezeigt werden. 
+
+
+# Issues Erledigt
+
+// bitte verschieben
