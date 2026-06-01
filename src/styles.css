@@ -233,6 +233,10 @@ input {
   gap: 8px;
 }
 
+.backToResults {
+  grid-column: 1 / 3;
+}
+
 .content {
   min-height: 0;
   flex: 1;
@@ -309,7 +313,24 @@ h3 {
   border-bottom: 1px solid var(--border);
 }
 
+.songRow.playlistSongRow {
+  grid-template-columns: 42px 72px minmax(0, 1fr) 126px 116px;
+}
+
+.songRow.dragging {
+  opacity: 0.38;
+}
+
+.songRow.dropBefore {
+  box-shadow: inset 0 5px 0 var(--accent);
+}
+
+.songRow.dropAfter {
+  box-shadow: inset 0 -5px 0 var(--accent);
+}
+
 .playlistRow {
+  grid-template-columns: 72px minmax(0, 1fr);
   background: color-mix(in srgb, var(--accent), transparent 93%);
 }
 
@@ -392,6 +413,10 @@ h3 {
   cursor: grab;
   touch-action: none;
   user-select: none;
+}
+
+.resultDragHandle {
+  align-self: stretch;
 }
 
 .verlaufItem {

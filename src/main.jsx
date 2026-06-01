@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
 import {
+  ArrowLeft,
   Eye,
   EyeOff,
   Heart,
@@ -176,6 +177,7 @@ function App() {
   const [songs, setSongs] = useState([])
   const [playlistResults, setPlaylistResults] = useState([])
   const [resultTitle, setResultTitle] = useState("Treffer")
+  const [playlistView, setPlaylistView] = useState(null)
   const [verlauf, setVerlauf] = useState(savedState?.verlauf || [])
   const [currentIndex, setCurrentIndex] = useState(savedState?.currentIndex ?? -1)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -298,6 +300,7 @@ function App() {
   }, [auth, canUseApi])
 
   useEffect(() => {
+    if (playlistView) return
     if (!query.trim() || !canUseApi) {
       setSongs([])
       setPlaylistResults([])
@@ -333,7 +336,7 @@ function App() {
       }
     }, 250)
     return () => window.clearTimeout(handle)
-  }, [auth, canUseApi, query])
+  }, [auth, canUseApi, playlistView, query])
 
   useEffect(() => {
     if (currentIndex <= MAX_HISTORY || verlauf.length <= MAX_HISTORY + MIN_FUTURE) return
@@ -546,6 +549,13 @@ function App() {
       setStatus(`Lade Playlist: ${playlist.name}`)
       const data = await subsonic("getPlaylist", { id: playlist.id }, auth)
       const playlistSongs = (data.playlist?.entry || []).map(normalizeSong)
+      setPlaylistView({
+        id: playlist.id,
+        name: playlist.name,
+        previousSongs: songs,
+        previousPlaylists: playlistResults,
+        previousTitle: resultTitle,
+      })
       setSongs(playlistSongs)
       setPlaylistResults([])
       setResultTitle(playlist.name)
@@ -553,6 +563,14 @@ function App() {
     } catch (err) {
       setStatus(err.message)
     }
+  }
+
+  function closePlaylistView() {
+    setSongs(playlistView?.previousSongs || [])
+    setPlaylistResults(playlistView?.previousPlaylists || [])
+    setResultTitle(playlistView?.previousTitle || "Treffer")
+    setPlaylistView(null)
+    setMenu(null)
   }
 
   async function toggleStar() {
@@ -570,10 +588,11 @@ function App() {
   async function randomPlay() {
     try {
       setStatus("Lade zufaellige Songs...")
-      const data = await subsonic("getRandomSongs", { size: MIN_FUTURE }, auth)
+      const data = await subsonic("getRandomSongs", { size: 30 }, auth)
       const randomSongs = (data.randomSongs?.song || []).map(normalizeSong)
       setSongs(randomSongs)
       setPlaylistResults([])
+      setPlaylistView(null)
       setResultTitle("Zufall")
       setStatus("")
     } catch (err) {
@@ -590,6 +609,7 @@ function App() {
       const data = await subsonic("getAlbum", { id: song.albumId }, auth)
       setSongs((data.album?.song || []).map(normalizeSong))
       setPlaylistResults([])
+      setPlaylistView(null)
       setResultTitle(song.album || "Album")
       setStatus(`Album: ${song.album}`)
       setMenu(null)
@@ -652,6 +672,18 @@ function App() {
       await subsonic("createPlaylist", { name: newPlaylistName.trim(), songId }, auth)
       setNewPlaylistName("")
       setStatus("Playlist erstellt.")
+      setMenu(null)
+    } catch (err) {
+      setStatus(err.message)
+    }
+  }
+
+  async function removeFromPlaylist(index) {
+    if (!playlistView) return
+    try {
+      await subsonic("updatePlaylist", { playlistId: playlistView.id, songIndexToRemove: index }, auth)
+      setSongs((items) => items.filter((_, itemIndex) => itemIndex !== index))
+      setStatus("Aus der Playlist entfernt.")
       setMenu(null)
     } catch (err) {
       setStatus(err.message)
@@ -725,6 +757,34 @@ function App() {
     })
   }
 
+  async function savePlaylistOrder(nextSongs) {
+    if (!playlistView) return
+    try {
+      await subsonic("createPlaylist", { playlistId: playlistView.id, songId: nextSongs.map((song) => song.id) }, auth)
+      setStatus("Playlist umsortiert.")
+    } catch (err) {
+      setStatus(err.message)
+    }
+  }
+
+  function movePlaylistItem(fromIndex, toIndex) {
+    if (!playlistView || fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return
+    setSongs((items) => {
+      if (fromIndex >= items.length || toIndex >= items.length) return items
+      const nextItems = [...items]
+      const [moved] = nextItems.splice(fromIndex, 1)
+      nextItems.splice(toIndex, 0, moved)
+      savePlaylistOrder(nextItems)
+      return nextItems
+    })
+  }
+
+  function movePlaylistToInsertIndex(fromIndex, insertIndex) {
+    const boundedInsertIndex = Math.max(0, Math.min(insertIndex, songs.length))
+    const toIndex = fromIndex < boundedInsertIndex ? boundedInsertIndex - 1 : boundedInsertIndex
+    movePlaylistItem(fromIndex, toIndex)
+  }
+
   function moveVerlaufToInsertIndex(fromIndex, insertIndex) {
     const boundedInsertIndex = Math.max(0, Math.min(insertIndex, verlauf.length))
     const toIndex = fromIndex < boundedInsertIndex ? boundedInsertIndex - 1 : boundedInsertIndex
@@ -742,10 +802,22 @@ function App() {
     return rows.length
   }
 
+  function getPlaylistInsertIndex(clientY) {
+    const rows = [...document.querySelectorAll(".songRow.playlistSongRow")]
+    if (!rows.length) return 0
+    for (const row of rows) {
+      const rect = row.getBoundingClientRect()
+      const rowIndex = Number(row.dataset.index)
+      if (clientY < rect.top + rect.height / 2) return rowIndex
+    }
+    return rows.length
+  }
+
   function beginVerlaufDrag(index, event) {
     event.preventDefault()
     const updateDrag = (clientX, clientY) => {
       setDragState({
+        type: "verlauf",
         fromIndex: index,
         insertIndex: getVerlaufInsertIndex(clientY),
         x: clientX,
@@ -767,6 +839,46 @@ function App() {
       const insertIndex = getVerlaufInsertIndex(upEvent.clientY)
       setDragState(null)
       moveVerlaufToInsertIndex(index, insertIndex)
+    }
+    const handleCancel = () => {
+      window.removeEventListener("pointermove", handleMove)
+      window.removeEventListener("pointerup", handleEnd)
+      window.removeEventListener("pointercancel", handleCancel)
+      setDragState(null)
+    }
+
+    window.addEventListener("pointermove", handleMove, { passive: false })
+    window.addEventListener("pointerup", handleEnd, { once: true })
+    window.addEventListener("pointercancel", handleCancel, { once: true })
+  }
+
+  function beginPlaylistDrag(index, event) {
+    if (!playlistView) return
+    event.preventDefault()
+    const updateDrag = (clientX, clientY) => {
+      setDragState({
+        type: "playlist",
+        fromIndex: index,
+        insertIndex: getPlaylistInsertIndex(clientY),
+        x: clientX,
+        y: clientY,
+        song: songs[index],
+      })
+    }
+    updateDrag(event.clientX, event.clientY)
+
+    const handleMove = (moveEvent) => {
+      moveEvent.preventDefault()
+      updateDrag(moveEvent.clientX, moveEvent.clientY)
+    }
+    const handleEnd = (upEvent) => {
+      upEvent.preventDefault()
+      window.removeEventListener("pointermove", handleMove)
+      window.removeEventListener("pointerup", handleEnd)
+      window.removeEventListener("pointercancel", handleCancel)
+      const insertIndex = getPlaylistInsertIndex(upEvent.clientY)
+      setDragState(null)
+      movePlaylistToInsertIndex(index, insertIndex)
     }
     const handleCancel = () => {
       window.removeEventListener("pointermove", handleMove)
@@ -891,15 +1003,24 @@ function App() {
       </header>
 
       <section className="searchBar">
-        <Search size={30} />
-        <div className="searchField">
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Suche nach Titel, Album, Artist oder Playlist" />
-          {query && (
-            <button type="button" onClick={() => setQuery("")} aria-label="Suche löschen">
-              <X size={28} />
-            </button>
-          )}
-        </div>
+        {playlistView ? (
+          <button className="backToResults" type="button" onClick={closePlaylistView}>
+            <ArrowLeft size={30} />
+            Zurück
+          </button>
+        ) : (
+          <>
+            <Search size={30} />
+            <div className="searchField">
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Suche nach Titel, Album, Artist oder Playlist" />
+              {query && (
+                <button type="button" onClick={() => setQuery("")} aria-label="Suche löschen">
+                  <X size={28} />
+                </button>
+              )}
+            </div>
+          </>
+        )}
         <button type="button" onClick={randomPlay}>
           <Shuffle size={24} />
           Zufall
@@ -911,7 +1032,12 @@ function App() {
 
       <section className="content">
         <div className="results">
-          <button className="sectionHeader buttonHeader" type="button" onClick={() => setMenu({ type: "results" })}>
+          <button
+            className="sectionHeader buttonHeader"
+            type="button"
+            disabled={!songs.length && !playlistResults.length}
+            onClick={() => setMenu({ type: "results" })}
+          >
             <h2>{resultTitle}</h2>
             <span>{status || `${songs.length} Songs / ${playlistResults.length} Playlists`}</span>
           </button>
@@ -919,15 +1045,27 @@ function App() {
             {playlistResults.map((playlist) => (
               <PlaylistRow key={playlist.id} playlist={playlist} auth={auth} onSelect={() => showPlaylist(playlist)} />
             ))}
-            {songs.map((song) => (
+            {songs.map((song, index) => (
               <SongRow
                 key={song.id}
                 song={song}
+                index={index}
                 auth={auth}
+                playlistMode={Boolean(playlistView)}
+                dragging={dragState?.type === "playlist" && dragState.fromIndex === index}
+                dropPosition={
+                  dragState?.type === "playlist" && dragState.insertIndex === index
+                    ? "before"
+                    : dragState?.type === "playlist" && dragState.insertIndex === songs.length && index === songs.length - 1
+                      ? "after"
+                      : ""
+                }
                 onPlay={() => insertAndPlay(song)}
                 onQueue={() => addToVerlauf(song)}
+                onMove={movePlaylistItem}
+                onPointerDragStart={(event) => beginPlaylistDrag(index, event)}
                 onMenu={() => {
-                  setMenu({ type: "song", song })
+                  setMenu({ type: playlistView ? "playlistSong" : "song", song, index })
                   loadPlaylists()
                 }}
               />
@@ -957,11 +1095,11 @@ function App() {
                 song={song}
                 index={index}
                 active={index === currentIndex}
-                dragging={dragState?.fromIndex === index}
+                dragging={dragState?.type === "verlauf" && dragState.fromIndex === index}
                 dropPosition={
-                  dragState?.insertIndex === index
+                  dragState?.type === "verlauf" && dragState.insertIndex === index
                     ? "before"
-                    : dragState?.insertIndex === verlauf.length && index === verlauf.length - 1
+                    : dragState?.type === "verlauf" && dragState.insertIndex === verlauf.length && index === verlauf.length - 1
                       ? "after"
                       : ""
                 }
@@ -997,6 +1135,7 @@ function App() {
           onShowAlbum={() => showAlbum(menu.song)}
           onShowArtist={() => showArtist(menu.song)}
           onRemove={() => removeFromVerlauf(menu.index)}
+          onRemoveFromPlaylist={() => removeFromPlaylist(menu.index)}
           onClear={clearVerlauf}
           onRemovePast={removePastSongs}
           onRemoveFuture={removeFutureSongs}
@@ -1030,11 +1169,56 @@ function longPress(callback) {
   }
 }
 
-function SongRow({ song, auth, onPlay, onQueue, onMenu }) {
+function SongRow({
+  song,
+  index,
+  auth,
+  playlistMode,
+  dragging,
+  dropPosition,
+  onPlay,
+  onQueue,
+  onMove,
+  onPointerDragStart,
+  onMenu,
+}) {
   const coverUrl = song.coverArt ? subsonicUrl("getCoverArt", { id: song.coverArt, size: 96, square: true }, auth) : ""
+  const rowClassName = [
+    "songRow",
+    playlistMode ? "playlistSongRow" : "",
+    dragging ? "dragging" : "",
+    dropPosition === "before" ? "dropBefore" : "",
+    dropPosition === "after" ? "dropAfter" : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
 
   return (
-    <article className="songRow">
+    <article
+      className={rowClassName}
+      data-index={index}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault()
+        const fromIndex = Number(event.dataTransfer.getData("text/plain"))
+        if (Number.isFinite(fromIndex)) onMove(fromIndex, index)
+      }}
+    >
+      {playlistMode && (
+        <button
+          className="dragHandle resultDragHandle"
+          type="button"
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer.setData("text/plain", String(index))
+            event.dataTransfer.effectAllowed = "move"
+          }}
+          onPointerDown={onPointerDragStart}
+          aria-label="Playlist Eintrag verschieben"
+        >
+          <GripVertical size={26} />
+        </button>
+      )}
       <button className="coverButton" type="button" onClick={onPlay}>
         {coverUrl ? <img src={coverUrl} alt="" /> : <Play size={34} />}
       </button>
@@ -1066,10 +1250,6 @@ function PlaylistRow({ playlist, auth, onSelect }) {
       <button className="songText" type="button" onClick={onSelect}>
         <strong>{playlist.name}</strong>
         <span>Playlist - {playlist.songCount} Songs</span>
-      </button>
-      <button className="actionButton wideAction" type="button" onClick={onSelect}>
-        <ListMusic size={28} />
-        Öffnen
       </button>
     </article>
   )
@@ -1138,6 +1318,7 @@ function ActionMenu({
   onShowAlbum,
   onShowArtist,
   onRemove,
+  onRemoveFromPlaylist,
   onClear,
   onRemovePast,
   onRemoveFuture,
@@ -1154,7 +1335,7 @@ function ActionMenu({
   theme,
   onThemeChange,
 }) {
-  const isSongMenu = menu.type === "song" || menu.type === "verlaufSong"
+  const isSongMenu = menu.type === "song" || menu.type === "playlistSong" || menu.type === "verlaufSong"
   const menuTitle = isSongMenu ? menu.song.title : menu.type === "results" ? resultTitle : menu.type === "user" ? "Benutzer" : "Verlauf"
   return (
     <div className="modalBackdrop" onClick={onClose}>
@@ -1193,7 +1374,14 @@ function ActionMenu({
           </>
         )}
 
-        {menu.type === "song" && <button type="button" onClick={onInsertAfter}>Einfügen nach aktuellem Song</button>}
+        {(menu.type === "song" || menu.type === "playlistSong") && <button type="button" onClick={onInsertAfter}>Einfügen</button>}
+
+        {menu.type === "playlistSong" && (
+          <button type="button" onClick={onRemoveFromPlaylist}>
+            <Trash2 size={24} />
+            Aus der Playlist entfernen
+          </button>
+        )}
 
         {menu.type === "verlaufSong" && (
           <>
