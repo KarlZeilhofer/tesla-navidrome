@@ -58,6 +58,23 @@
 29. [Alle wiedergeben] soll in das Menü "Treffer". 
 30. Suche soll auch nach Playlists suchen. Wenn es eine Playlist "Party" gibt, und ich 
     suche nach "Par", dann muss diese Playlist in den Treffer angezeigt werden. 
+31. Verlauf und Treffer müssen als Button erkenntlich sein!
+32. Der Button [Zufall] soll nur eine Trefferliste mit 8 Songs erstellen, aber sie nicht automatisch 
+    im Verlauf anhängen. 
+33. Verlaufbutton: neuer Eintrag: [Entferne vergangene Songs] und [Entferne zukünftige Songs]
+34. Das Verhalten für das automatische Anhängen von 8 Zufallssongs muss leicht geändert werden. 
+    Erst bei einem Skip wird diese Regel angewandt, nicht immmer. Das ermöglicht, 
+    dass man sich eine eigene Playlist im Verlauf zusammenstellen kann. 
+35. Long-Press im Verlauf wird ersetzt durch ein vertikales 3-punkt symbol am rechten Rand eines 
+    Eintrags in der Verlaufsliste. 
+36. Im Tesla hatte ich einmal den Bug, dass ein Song fertig war, und dann nicht der nächste
+    Song im Verlauf abgespielt wurde. Die Wiedergabe stoppte. 
+37. Den weiteren Bug: ich hatte ein Lied abgespielt, dann auf like geklickt, dann im
+    Verlauf ein anderes Lied gestartet und dann mit [Back] wieder das vorige lied gestartet, 
+    dabei wurde das lied an dessen letzter position fortgesetzt. Das ist unerwartetes verhalten. 
+    Ein song sollte immer am Anfang starten. 
+38. Im User-Menü soll man auch einstellen können, ob man Light/Darktheme oder Auto verwenden möchte. 
+39. Verschiebe die erledigten Issues ins nächste Kapitel "Issues Erledigt". Behalte die Nummerierung aber bei. 
 
 
 # Issues Erledigt
