@@ -8,10 +8,25 @@
 21. Verlauf-Menü: noch offene Einträge:
     [Unbeliebte Songs entfernen] --> entfernt Songs, die mehr als 10% aber weniger als zu 50% gespielt wurden. 
     Gefällt ein Lied nicht besonders gut, wird es typischerweise geskippt. 
-    [Verlauf als Playlist speichern]
+    [Verlauf an Playlist anhängen] mit der Option eine neue Playlist erstellen zu können. 
+    Identisch präsentiert wie für einen einzelnen Song auch. 
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
-
+40. Eingabe eines Leerzeichens (am PC-Browser) in der Suchzeile toggelt Playback/Pause
+    völlig unerwartetes und unerwünschtes verhalten. 
+41. Die Touchfläche 3-punkt in der Verlaufsliste soll nicht als separater button
+    dargestellt werden, sondern als rechtsbündige punkte im Eintrag. 
+    klickt man also am rechen rand, erhält man das optionsmenü, sonst wird der
+    song abgespielt. 
+42. Die Buttonflächen Treffer und Verlauf sollen wie ein Button, Rechteckig, abgerundet
+    dargestellt sein. 
+43. Treffer-Menü: zusätzlich zu [Alle wiedergeben] bitte auch noch 
+    [Alle anhängen] (ganz unten) und
+    [Alle einfügen] (nach aktuellem Song)
+44. gleiche nomenklatur auch für die Menüs einzelner Songs:
+    statt Button "Verlauf" soll hier "anhängen" stehen. 
+45. gib der Liste "Verlauf" mehr Breite. Somit kannst du auch an jedem Song links 
+    ein Handle darstellen, wo man den Song im Verlauf verschieben kann, per drag. 
 
 # Issues Erledigt
 
