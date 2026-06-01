@@ -7,6 +7,9 @@
     Für kurze Wiedergabepause ist es aktuell unbrauchbar, wäre aber sehr wichtig.
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
+62. Mit dem Suchbegriff "Playlist" oder anfänge davon sollen (auch) alle Playlists gelistet werden. 
+    Wenn es andere Suchergebnisse mit diesem begriff gibt, müssen sie natürlich auch gelistet werden. 
+
 
 # Issues Erledigt
 
