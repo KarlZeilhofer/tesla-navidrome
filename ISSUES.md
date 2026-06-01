@@ -7,10 +7,6 @@
     Für kurze Wiedergabepause ist es aktuell unbrauchbar, wäre aber sehr wichtig.
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
-53. Drag'n'Drop funktioniert im Verlauf nun. 
-    Aber das gezogene Element soll sichtbar am Finger hängen und die Zielposition 
-    muss intuitiv visualisiert werden (z.B. durch horizontalen einfügebalken). 
-
 
 
 # Issues Erledigt
@@ -116,3 +112,6 @@
     [Verlauf ersetzen] - das löscht somit den Verlauf, fügt alle Songs aus
     Treffer/Playlist ein und startet die wiedergabe.
 52. Der Löschen-Button X soll rechtsbündig in der Eingabezeile stehen, nicht daneben.
+53. Drag'n'Drop funktioniert im Verlauf nun.
+    Aber das gezogene Element soll sichtbar am Finger hängen und die Zielposition
+    muss intuitiv visualisiert werden (z.B. durch horizontalen einfügebalken).

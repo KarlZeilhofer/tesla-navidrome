@@ -186,6 +186,7 @@ function App() {
   const [menu, setMenu] = useState(null)
   const [playlists, setPlaylists] = useState([])
   const [newPlaylistName, setNewPlaylistName] = useState("")
+  const [dragState, setDragState] = useState(null)
   const audioRef = useRef(null)
   const currentRowRef = useRef(null)
   const pendingSeekRef = useRef(savedState?.position || 0)
@@ -724,6 +725,61 @@ function App() {
     })
   }
 
+  function moveVerlaufToInsertIndex(fromIndex, insertIndex) {
+    const boundedInsertIndex = Math.max(0, Math.min(insertIndex, verlauf.length))
+    const toIndex = fromIndex < boundedInsertIndex ? boundedInsertIndex - 1 : boundedInsertIndex
+    moveVerlaufItem(fromIndex, toIndex)
+  }
+
+  function getVerlaufInsertIndex(clientY) {
+    const rows = [...document.querySelectorAll(".verlaufRow")]
+    if (!rows.length) return 0
+    for (const row of rows) {
+      const rect = row.getBoundingClientRect()
+      const rowIndex = Number(row.dataset.index)
+      if (clientY < rect.top + rect.height / 2) return rowIndex
+    }
+    return rows.length
+  }
+
+  function beginVerlaufDrag(index, event) {
+    event.preventDefault()
+    const updateDrag = (clientX, clientY) => {
+      setDragState({
+        fromIndex: index,
+        insertIndex: getVerlaufInsertIndex(clientY),
+        x: clientX,
+        y: clientY,
+        song: verlauf[index],
+      })
+    }
+    updateDrag(event.clientX, event.clientY)
+
+    const handleMove = (moveEvent) => {
+      moveEvent.preventDefault()
+      updateDrag(moveEvent.clientX, moveEvent.clientY)
+    }
+    const handleEnd = (upEvent) => {
+      upEvent.preventDefault()
+      window.removeEventListener("pointermove", handleMove)
+      window.removeEventListener("pointerup", handleEnd)
+      window.removeEventListener("pointercancel", handleCancel)
+      const insertIndex = getVerlaufInsertIndex(upEvent.clientY)
+      setDragState(null)
+      moveVerlaufToInsertIndex(index, insertIndex)
+    }
+    const handleCancel = () => {
+      window.removeEventListener("pointermove", handleMove)
+      window.removeEventListener("pointerup", handleEnd)
+      window.removeEventListener("pointercancel", handleCancel)
+      setDragState(null)
+    }
+
+    window.addEventListener("pointermove", handleMove, { passive: false })
+    window.addEventListener("pointerup", handleEnd, { once: true })
+    window.addEventListener("pointercancel", handleCancel, { once: true })
+  }
+
 
   function clearVerlauf() {
     setMenu(null)
@@ -789,6 +845,18 @@ function App() {
   return (
     <main className="app">
       <audio ref={audioRef} preload="auto" />
+      {dragState?.song && (
+        <div
+          className="dragGhost"
+          style={{
+            left: `${Math.max(8, Math.min(dragState.x + 18, window.innerWidth - 390))}px`,
+            top: `${Math.max(8, Math.min(dragState.y + 18, window.innerHeight - 90))}px`,
+          }}
+        >
+          <strong>{dragState.song.title}</strong>
+          <span>{dragState.song.artist}</span>
+        </div>
+      )}
       <header className="playerBar">
         <button className="iconButton" type="button" onClick={previous} aria-label="Back">
           <SkipBack size={34} />
@@ -889,11 +957,20 @@ function App() {
                 song={song}
                 index={index}
                 active={index === currentIndex}
+                dragging={dragState?.fromIndex === index}
+                dropPosition={
+                  dragState?.insertIndex === index
+                    ? "before"
+                    : dragState?.insertIndex === verlauf.length && index === verlauf.length - 1
+                      ? "after"
+                      : ""
+                }
                 onClick={() => {
                   if (index !== currentIndex) markCurrentSongSkip()
                   setCurrentIndex(index)
                 }}
                 onMove={moveVerlaufItem}
+                onPointerDragStart={(event) => beginVerlaufDrag(index, event)}
                 onMenu={() => {
                   setMenu({ type: "verlaufSong", song, index })
                   loadPlaylists()
@@ -998,15 +1075,27 @@ function PlaylistRow({ playlist, auth, onSelect }) {
   )
 }
 
-const VerlaufRow = React.forwardRef(function VerlaufRow({ song, index, active, onClick, onMove, onMenu }, ref) {
+const VerlaufRow = React.forwardRef(function VerlaufRow(
+  { song, index, active, dragging, dropPosition, onClick, onMove, onPointerDragStart, onMenu },
+  ref,
+) {
   const handleDragStart = (event) => {
     event.dataTransfer.setData("text/plain", String(index))
     event.dataTransfer.effectAllowed = "move"
   }
+  const rowClassName = [
+    "verlaufRow",
+    active ? "active" : "",
+    dragging ? "dragging" : "",
+    dropPosition === "before" ? "dropBefore" : "",
+    dropPosition === "after" ? "dropAfter" : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
 
   return (
     <article
-      className={active ? "verlaufRow active" : "verlaufRow"}
+      className={rowClassName}
       ref={ref}
       data-index={index}
       onDragOver={(event) => event.preventDefault()}
@@ -1016,7 +1105,14 @@ const VerlaufRow = React.forwardRef(function VerlaufRow({ song, index, active, o
         if (Number.isFinite(fromIndex)) onMove(fromIndex, index)
       }}
     >
-      <button className="dragHandle" type="button" draggable onDragStart={handleDragStart} aria-label="Verschieben">
+      <button
+        className="dragHandle"
+        type="button"
+        draggable
+        onDragStart={handleDragStart}
+        onPointerDown={onPointerDragStart}
+        aria-label="Verschieben"
+      >
         <GripVertical size={26} />
       </button>
       <button className="verlaufItem" type="button" onClick={onClick}>

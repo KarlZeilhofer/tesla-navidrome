@@ -370,6 +370,18 @@ h3 {
   background: color-mix(in srgb, var(--accent), transparent 82%);
 }
 
+.verlaufRow.dragging {
+  opacity: 0.38;
+}
+
+.verlaufRow.dropBefore {
+  box-shadow: 0 -5px 0 var(--accent);
+}
+
+.verlaufRow.dropAfter {
+  box-shadow: 0 5px 0 var(--accent);
+}
+
 .dragHandle {
   min-width: 42px;
   padding: 0;
@@ -378,6 +390,8 @@ h3 {
   background: transparent;
   color: var(--muted);
   cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
 .verlaufItem {
@@ -396,6 +410,40 @@ h3 {
   border: 0;
   border-radius: 0;
   background: transparent;
+}
+
+.dragGhost {
+  position: fixed;
+  z-index: 40;
+  width: 360px;
+  max-width: calc(100vw - 16px);
+  min-height: 72px;
+  display: grid;
+  align-content: center;
+  padding: 8px 14px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 18px 44px rgb(0 0 0 / 0.38);
+  pointer-events: none;
+}
+
+.dragGhost strong,
+.dragGhost span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dragGhost strong {
+  font-size: 25px;
+}
+
+.dragGhost span {
+  color: var(--muted);
+  font-size: 14px;
 }
 
 .loginScreen {
