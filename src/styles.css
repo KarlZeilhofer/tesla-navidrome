@@ -230,7 +230,7 @@ input {
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 350px;
+  grid-template-columns: minmax(0, 1fr) 430px;
   gap: 14px;
   padding: 14px;
 }
@@ -262,8 +262,10 @@ input {
   width: 100%;
   min-height: 60px;
   border: 1px solid var(--border-strong);
-  border-radius: 8px 8px 0 0;
+  border-radius: 8px;
   background: var(--button);
+  margin: 8px;
+  width: calc(100% - 16px);
 }
 
 h2,
@@ -282,11 +284,11 @@ h3 {
 }
 
 .songList {
-  height: calc(100% - 54px);
+  height: calc(100% - 76px);
 }
 
 .verlaufList {
-  height: calc(100% - 54px);
+  height: calc(100% - 76px);
   padding-bottom: 10px;
 }
 
@@ -347,15 +349,23 @@ h3 {
   width: calc(100% - 20px);
   min-height: 72px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 64px;
+  grid-template-columns: 42px minmax(0, 1fr) 52px;
   gap: 8px;
   margin: 8px 10px 0;
 }
 
 .verlaufRow.active .verlaufItem,
-.verlaufRow.active .verlaufMenuButton {
+.verlaufRow.active .verlaufMenuButton,
+.verlaufRow.active .dragHandle {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent), transparent 82%);
+}
+
+.dragHandle {
+  min-width: 42px;
+  padding: 0;
+  color: var(--muted);
+  cursor: grab;
 }
 
 .verlaufItem {
@@ -366,8 +376,10 @@ h3 {
 }
 
 .verlaufMenuButton {
-  min-width: 64px;
+  min-width: 52px;
   padding: 0;
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
 }
 
 .loginScreen {

@@ -15,6 +15,7 @@ import {
   SkipBack,
   SkipForward,
   Trash2,
+  GripVertical,
   X,
 } from "lucide-react"
 import "./styles.css"
@@ -388,6 +389,8 @@ function App() {
 
   useEffect(() => {
     const handleKey = (event) => {
+      const tag = event.target?.tagName?.toLowerCase()
+      if (tag === "input" || tag === "textarea" || event.target?.isContentEditable) return
       if (event.key === "MediaTrackNext") next()
       if (event.key === "MediaTrackPrevious") previous()
       if (event.key === "MediaPlayPause" || event.key === " ") {
@@ -452,6 +455,20 @@ function App() {
     if (!songs.length) return
     setVerlauf((items) => [...items.slice(0, currentIndex + 1), ...songs])
     setCurrentIndex((idx) => (idx < 0 ? 0 : idx + 1))
+  }
+
+  function insertAllResults() {
+    if (!songs.length) return
+    setVerlauf((items) => [...items.slice(0, currentIndex + 1), ...songs, ...items.slice(currentIndex + 1)])
+    if (currentIndex < 0) setCurrentIndex(0)
+    setMenu(null)
+  }
+
+  function appendAllResults() {
+    if (!songs.length) return
+    setVerlauf((items) => [...items, ...songs])
+    if (currentIndex < 0) setCurrentIndex(0)
+    setMenu(null)
   }
 
   async function playPlaylist(playlist) {
@@ -535,6 +552,29 @@ function App() {
     }
   }
 
+  async function addVerlaufToPlaylist(playlistId) {
+    if (!verlauf.length) return
+    try {
+      await subsonic("updatePlaylist", { playlistId, songIdToAdd: verlauf.map((song) => song.id) }, auth)
+      setStatus("Verlauf an Playlist angehaengt.")
+      setMenu(null)
+    } catch (err) {
+      setStatus(err.message)
+    }
+  }
+
+  async function createPlaylistWithVerlauf() {
+    if (!newPlaylistName.trim() || !verlauf.length) return
+    try {
+      await subsonic("createPlaylist", { name: newPlaylistName.trim(), songId: verlauf.map((song) => song.id) }, auth)
+      setNewPlaylistName("")
+      setStatus("Playlist aus Verlauf erstellt.")
+      setMenu(null)
+    } catch (err) {
+      setStatus(err.message)
+    }
+  }
+
   async function createPlaylistWithSong(songId) {
     if (!newPlaylistName.trim()) return
     try {
@@ -569,6 +609,24 @@ function App() {
     setVerlauf((items) => items.slice(0, currentIndex + 1))
     setMenu(null)
   }
+
+  function moveVerlaufItem(fromIndex, toIndex) {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return
+    setVerlauf((items) => {
+      if (fromIndex >= items.length || toIndex >= items.length) return items
+      const nextItems = [...items]
+      const [moved] = nextItems.splice(fromIndex, 1)
+      nextItems.splice(toIndex, 0, moved)
+      return nextItems
+    })
+    setCurrentIndex((idx) => {
+      if (idx === fromIndex) return toIndex
+      if (fromIndex < idx && toIndex >= idx) return idx - 1
+      if (fromIndex > idx && toIndex <= idx) return idx + 1
+      return idx
+    })
+  }
+
 
   function clearVerlauf() {
     setMenu(null)
@@ -725,8 +783,10 @@ function App() {
                 ref={index === currentIndex ? currentRowRef : null}
                 key={`${song.id}-${index}`}
                 song={song}
+                index={index}
                 active={index === currentIndex}
                 onClick={() => setCurrentIndex(index)}
+                onMove={(toIndex) => moveVerlaufItem(index, toIndex)}
                 onMenu={() => {
                   setMenu({ type: "verlaufSong", song, index })
                   loadPlaylists()
@@ -758,7 +818,11 @@ function App() {
           onRemoveFuture={removeFutureSongs}
           onShuffle={shuffleVerlauf}
           onPlayAllResults={playAllResults}
+          onInsertAllResults={insertAllResults}
+          onAppendAllResults={appendAllResults}
           onLogout={logout}
+          onAddVerlaufPlaylist={addVerlaufToPlaylist}
+          onCreateVerlaufPlaylist={createPlaylistWithVerlauf}
           theme={theme}
           onThemeChange={setTheme}
         />
@@ -795,7 +859,7 @@ function SongRow({ song, auth, onPlay, onQueue, onMenu }) {
       </button>
       <button className="actionButton" type="button" onClick={onQueue}>
         <ListPlus size={28} />
-        Verlauf
+        Anhängen
       </button>
       <button className="actionButton" type="button" onClick={onMenu} onPointerDown={longPress(onMenu)}>
         <MoreVertical size={28} />
@@ -824,9 +888,28 @@ function PlaylistRow({ playlist, auth, onPlay }) {
   )
 }
 
-const VerlaufRow = React.forwardRef(function VerlaufRow({ song, active, onClick, onMenu }, ref) {
+const VerlaufRow = React.forwardRef(function VerlaufRow({ song, index, active, onClick, onMove, onMenu }, ref) {
+  const handleDragStart = (event) => {
+    event.dataTransfer.setData("text/plain", event.currentTarget.dataset.index || "")
+    event.dataTransfer.effectAllowed = "move"
+  }
+
   return (
-    <article className={active ? "verlaufRow active" : "verlaufRow"} ref={ref}>
+    <article
+      className={active ? "verlaufRow active" : "verlaufRow"}
+      ref={ref}
+      data-index={index}
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault()
+        const fromIndex = Number(event.dataTransfer.getData("text/plain"))
+        const toIndex = Number(event.currentTarget.dataset.index)
+        if (Number.isFinite(fromIndex) && Number.isFinite(toIndex)) onMove(toIndex)
+      }}
+    >
+      <button className="dragHandle" type="button" draggable onDragStart={handleDragStart} aria-label="Verschieben">
+        <GripVertical size={26} />
+      </button>
       <button className="verlaufItem" type="button" onClick={onClick}>
         <strong>{song.title}</strong>
         <span>{song.artist}</span>
@@ -855,7 +938,11 @@ function ActionMenu({
   onRemoveFuture,
   onShuffle,
   onPlayAllResults,
+  onInsertAllResults,
+  onAppendAllResults,
   onLogout,
+  onAddVerlaufPlaylist,
+  onCreateVerlaufPlaylist,
   theme,
   onThemeChange,
 }) {
@@ -868,7 +955,13 @@ function ActionMenu({
           <button type="button" onClick={onClose}>Schliessen</button>
         </header>
 
-        {menu.type === "results" && <button type="button" onClick={onPlayAllResults}>Alle wiedergeben</button>}
+        {menu.type === "results" && (
+          <>
+            <button type="button" onClick={onPlayAllResults}>Alle wiedergeben</button>
+            <button type="button" onClick={onInsertAllResults}>Alle einfügen</button>
+            <button type="button" onClick={onAppendAllResults}>Alle anhängen</button>
+          </>
+        )}
 
         {menu.type === "user" && (
           <>
@@ -927,8 +1020,22 @@ function ActionMenu({
             <button type="button" onClick={onRemovePast}>Entferne vergangene Songs</button>
             <button type="button" onClick={onRemoveFuture}>Entferne zukünftige Songs</button>
             <button type="button" disabled>Unbeliebte Songs entfernen</button>
-            <button type="button" disabled>Verlauf als Playlist speichern</button>
             <button type="button" onClick={onShuffle}>Verlauf würfeln</button>
+            <div className="playlistBox">
+              <h3>Verlauf an Playlist anhängen</h3>
+              <div className="playlistList">
+                {playlists.map((playlist) => (
+                  <button key={playlist.id} type="button" onClick={() => onAddVerlaufPlaylist(playlist.id)}>
+                    <ListMusic size={24} />
+                    {playlist.name}
+                  </button>
+                ))}
+              </div>
+              <div className="newPlaylist">
+                <input value={newPlaylistName} onChange={(event) => setNewPlaylistName(event.target.value)} placeholder="Neue Playlist" />
+                <button type="button" onClick={onCreateVerlaufPlaylist}>Plus</button>
+              </div>
+            </div>
           </>
         )}
       </section>
