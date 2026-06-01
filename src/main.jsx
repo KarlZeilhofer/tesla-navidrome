@@ -22,9 +22,9 @@ import "./styles.css"
 const CLIENT = "TeslaNavidrome"
 const API_VERSION = "1.16.1"
 const STORAGE_KEY = "teslaNavidromeState"
+const THEME_KEY = "teslaNavidromeTheme"
 const MIN_FUTURE = 8
 const MAX_HISTORY = 200
-const MAX_RANDOM_HISTORY = 100
 
 function authState() {
   return {
@@ -166,6 +166,7 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [status, setStatus] = useState("")
   const [time, setTime] = useState({ current: savedState?.position || 0, duration: 0 })
+  const [theme, setTheme] = useState(localStorage.getItem(THEME_KEY) || "auto")
   const [showPassword, setShowPassword] = useState(false)
   const [menu, setMenu] = useState(null)
   const [playlists, setPlaylists] = useState([])
@@ -173,6 +174,7 @@ function App() {
   const audioRef = useRef(null)
   const currentRowRef = useRef(null)
   const pendingSeekRef = useRef(savedState?.position || 0)
+  const didRestorePositionRef = useRef(false)
   const randomRefillRunning = useRef(false)
 
   const currentSong = currentIndex >= 0 ? verlauf[currentIndex] : null
@@ -186,7 +188,7 @@ function App() {
 
   const addRandomFuture = useCallback(
     async (count = MIN_FUTURE) => {
-      if (!canUseApi || randomRefillRunning.current) return
+      if (!canUseApi || randomRefillRunning.current) return []
       randomRefillRunning.current = true
       try {
         const data = await subsonic("getRandomSongs", { size: count }, auth)
@@ -194,8 +196,10 @@ function App() {
         if (randomSongs.length) {
           setVerlauf((items) => [...items, ...randomSongs])
         }
+        return randomSongs
       } catch (err) {
         setStatus(err.message)
+        return []
       } finally {
         randomRefillRunning.current = false
       }
@@ -203,12 +207,15 @@ function App() {
     [auth, canUseApi],
   )
 
-  const next = useCallback(() => {
+  const next = useCallback(async () => {
+    const currentFutureCount = Math.max(0, verlauf.length - currentIndex - 1)
+    const added = currentIndex >= 0 && currentFutureCount < MIN_FUTURE ? await addRandomFuture(MIN_FUTURE - currentFutureCount) : []
+    const availableLength = verlauf.length + added.length
     setCurrentIndex((idx) => {
       if (idx < 0) return idx
-      return Math.min(verlauf.length - 1, idx + 1)
+      return Math.min(availableLength - 1, idx + 1)
     })
-  }, [verlauf.length])
+  }, [addRandomFuture, currentIndex, verlauf.length])
 
   const previous = useCallback(() => {
     const audio = audioRef.current
@@ -217,8 +224,12 @@ function App() {
       setTime((value) => ({ ...value, current: 0 }))
       return
     }
+    const currentFutureCount = Math.max(0, verlauf.length - currentIndex - 1)
+    if (currentIndex >= 0 && currentFutureCount < MIN_FUTURE) {
+      addRandomFuture(MIN_FUTURE - currentFutureCount)
+    }
     setCurrentIndex((idx) => Math.max(0, idx - 1))
-  }, [])
+  }, [addRandomFuture, currentIndex, verlauf.length])
 
   const togglePlayback = useCallback(async () => {
     const audio = audioRef.current
@@ -279,13 +290,6 @@ function App() {
   }, [auth, canUseApi, query])
 
   useEffect(() => {
-    if (!canUseApi || currentIndex < 0) return
-    if (futureCount < MIN_FUTURE) {
-      addRandomFuture(MIN_FUTURE - futureCount)
-    }
-  }, [addRandomFuture, canUseApi, currentIndex, futureCount])
-
-  useEffect(() => {
     if (currentIndex <= MAX_HISTORY || verlauf.length <= MAX_HISTORY + MIN_FUTURE) return
     const drop = currentIndex - MAX_HISTORY
     setVerlauf((items) => items.slice(drop))
@@ -304,6 +308,11 @@ function App() {
   useEffect(() => {
     currentRowRef.current?.scrollIntoView({ block: "center", behavior: "smooth" })
   }, [currentIndex])
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem(THEME_KEY, theme)
+  }, [theme])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -338,7 +347,12 @@ function App() {
 
   useEffect(() => {
     if (!streamUrl || !audioRef.current) return
-    pendingSeekRef.current = currentSong?.id === savedState?.verlauf?.[savedState.currentIndex]?.id ? savedState.position : 0
+    const shouldRestore =
+      !didRestorePositionRef.current &&
+      currentSong?.id === savedState?.verlauf?.[savedState.currentIndex]?.id &&
+      savedState.position > 0
+    pendingSeekRef.current = shouldRestore ? savedState.position : 0
+    didRestorePositionRef.current = true
     audioRef.current.removeAttribute("poster")
     audioRef.current.src = streamUrl
     audioRef.current.play().catch((err) => {
@@ -474,12 +488,7 @@ function App() {
       const data = await subsonic("getRandomSongs", { size: MIN_FUTURE }, auth)
       const randomSongs = (data.randomSongs?.song || []).map(normalizeSong)
       setSongs(randomSongs)
-      setVerlauf((items) => {
-        const keepFrom = Math.max(0, currentIndex - MAX_RANDOM_HISTORY + 1)
-        const history = currentIndex >= 0 ? items.slice(keepFrom, currentIndex + 1) : []
-        return [...history, ...randomSongs]
-      })
-      setCurrentIndex((idx) => (idx < 0 ? 0 : Math.min(idx - Math.max(0, idx - MAX_RANDOM_HISTORY + 1), MAX_RANDOM_HISTORY - 1)))
+      setPlaylistResults([])
       setStatus("")
     } catch (err) {
       setStatus(err.message)
@@ -545,6 +554,19 @@ function App() {
       if (index === idx) return Math.min(idx, Math.max(0, verlauf.length - 2))
       return idx
     })
+    setMenu(null)
+  }
+
+  function removePastSongs() {
+    if (currentIndex <= 0) return
+    setVerlauf((items) => items.slice(currentIndex))
+    setCurrentIndex(0)
+    setMenu(null)
+  }
+
+  function removeFutureSongs() {
+    if (currentIndex < 0) return
+    setVerlauf((items) => items.slice(0, currentIndex + 1))
     setMenu(null)
   }
 
@@ -699,21 +721,17 @@ function App() {
           </button>
           <div className="verlaufList">
             {verlauf.map((song, index) => (
-              <button
+              <VerlaufRow
                 ref={index === currentIndex ? currentRowRef : null}
                 key={`${song.id}-${index}`}
-                className={index === currentIndex ? "verlaufItem active" : "verlaufItem"}
-                type="button"
+                song={song}
+                active={index === currentIndex}
                 onClick={() => setCurrentIndex(index)}
-                onContextMenu={(event) => event.preventDefault()}
-                onPointerDown={longPress(() => {
+                onMenu={() => {
                   setMenu({ type: "verlaufSong", song, index })
                   loadPlaylists()
-                })}
-              >
-                <strong>{song.title}</strong>
-                <span>{song.artist}</span>
-              </button>
+                }}
+              />
             ))}
           </div>
         </aside>
@@ -736,9 +754,13 @@ function App() {
           onShowArtist={() => showArtist(menu.song)}
           onRemove={() => removeFromVerlauf(menu.index)}
           onClear={clearVerlauf}
+          onRemovePast={removePastSongs}
+          onRemoveFuture={removeFutureSongs}
           onShuffle={shuffleVerlauf}
           onPlayAllResults={playAllResults}
           onLogout={logout}
+          theme={theme}
+          onThemeChange={setTheme}
         />
       )}
     </main>
@@ -802,6 +824,20 @@ function PlaylistRow({ playlist, auth, onPlay }) {
   )
 }
 
+const VerlaufRow = React.forwardRef(function VerlaufRow({ song, active, onClick, onMenu }, ref) {
+  return (
+    <article className={active ? "verlaufRow active" : "verlaufRow"} ref={ref}>
+      <button className="verlaufItem" type="button" onClick={onClick}>
+        <strong>{song.title}</strong>
+        <span>{song.artist}</span>
+      </button>
+      <button className="verlaufMenuButton" type="button" onClick={onMenu} aria-label="Verlauf Eintrag Aktionen">
+        <MoreVertical size={28} />
+      </button>
+    </article>
+  )
+})
+
 function ActionMenu({
   menu,
   playlists,
@@ -815,9 +851,13 @@ function ActionMenu({
   onShowArtist,
   onRemove,
   onClear,
+  onRemovePast,
+  onRemoveFuture,
   onShuffle,
   onPlayAllResults,
   onLogout,
+  theme,
+  onThemeChange,
 }) {
   const isSongMenu = menu.type === "song" || menu.type === "verlaufSong"
   return (
@@ -831,10 +871,23 @@ function ActionMenu({
         {menu.type === "results" && <button type="button" onClick={onPlayAllResults}>Alle wiedergeben</button>}
 
         {menu.type === "user" && (
-          <button type="button" onClick={onLogout}>
-            <LogOut size={28} />
-            Logout
-          </button>
+          <>
+            <div className="themeButtons">
+              <button className={theme === "auto" ? "selected" : ""} type="button" onClick={() => onThemeChange("auto")}>
+                Auto
+              </button>
+              <button className={theme === "dark" ? "selected" : ""} type="button" onClick={() => onThemeChange("dark")}>
+                Dark
+              </button>
+              <button className={theme === "light" ? "selected" : ""} type="button" onClick={() => onThemeChange("light")}>
+                Light
+              </button>
+            </div>
+            <button type="button" onClick={onLogout}>
+              <LogOut size={28} />
+              Logout
+            </button>
+          </>
         )}
 
         {menu.type === "song" && <button type="button" onClick={onInsertAfter}>Einfügen nach aktuellem Song</button>}
@@ -871,6 +924,8 @@ function ActionMenu({
         {menu.type === "verlauf" && (
           <>
             <button type="button" onClick={onClear}>Löschen und mit Zufall füllen</button>
+            <button type="button" onClick={onRemovePast}>Entferne vergangene Songs</button>
+            <button type="button" onClick={onRemoveFuture}>Entferne zukünftige Songs</button>
             <button type="button" disabled>Unbeliebte Songs entfernen</button>
             <button type="button" disabled>Verlauf als Playlist speichern</button>
             <button type="button" onClick={onShuffle}>Verlauf würfeln</button>

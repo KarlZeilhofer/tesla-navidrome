@@ -36,6 +36,36 @@
   }
 }
 
+:root[data-theme="dark"] {
+  --bg: #0f1418;
+  --panel: #141d23;
+  --panel-strong: #121a20;
+  --button: #1e2a31;
+  --button-strong: #d9f2ff;
+  --button-strong-text: #071017;
+  --border: #26343c;
+  --border-strong: #334650;
+  --text: #f2f7f9;
+  --muted: #99acb6;
+  --accent: #8fe3ff;
+  --liked: #ff8fa3;
+}
+
+:root[data-theme="light"] {
+  --bg: #f2f5f6;
+  --panel: #ffffff;
+  --panel-strong: #e9eef1;
+  --button: #e6edf1;
+  --button-strong: #12313f;
+  --button-strong-text: #ffffff;
+  --border: #c8d4da;
+  --border-strong: #aabac2;
+  --text: #0e171d;
+  --muted: #556873;
+  --accent: #0c6f91;
+  --liked: #bb3150;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -230,6 +260,10 @@ input {
 
 .buttonHeader {
   width: 100%;
+  min-height: 60px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px 8px 0 0;
+  background: var(--button);
 }
 
 h2,
@@ -309,16 +343,31 @@ h3 {
   text-transform: none;
 }
 
-.verlaufItem {
+.verlaufRow {
   width: calc(100% - 20px);
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
+  gap: 8px;
   margin: 8px 10px 0;
+}
+
+.verlaufRow.active .verlaufItem,
+.verlaufRow.active .verlaufMenuButton {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent), transparent 82%);
+}
+
+.verlaufItem {
+  min-width: 0;
+  width: 100%;
   padding: 8px 12px;
   text-align: left;
 }
 
-.verlaufItem.active {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent), transparent 82%);
+.verlaufMenuButton {
+  min-width: 64px;
+  padding: 0;
 }
 
 .loginScreen {
@@ -441,6 +490,22 @@ h3 {
 .newPlaylist button {
   margin-top: 0;
   justify-content: center;
+}
+
+.themeButtons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.themeButtons button {
+  min-width: 0;
+  font-size: 25px;
+}
+
+.themeButtons .selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent), transparent 80%);
 }
 
 @media (max-height: 620px) {
