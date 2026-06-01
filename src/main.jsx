@@ -207,6 +207,7 @@ function App() {
   const currentSong = currentIndex >= 0 ? verlauf[currentIndex] : null
   const futureCount = Math.max(0, verlauf.length - currentIndex - 1)
   const canUseApi = auth.username && auth.subsonicToken && auth.salt
+  const isEditablePlaylist = playlistView?.type === "playlist"
 
   const streamUrl = useMemo(() => {
     if (!currentSong || !canUseApi) return ""
@@ -557,6 +558,7 @@ function App() {
       const data = await subsonic("getPlaylist", { id: playlist.id }, auth)
       const playlistSongs = (data.playlist?.entry || []).map(normalizeSong)
       setPlaylistView({
+        type: "playlist",
         id: playlist.id,
         name: playlist.name,
         previousSongs: songs,
@@ -629,10 +631,17 @@ function App() {
     }
     try {
       const data = await subsonic("getAlbum", { id: song.albumId }, auth)
+      setPlaylistView({
+        type: "album",
+        id: song.albumId,
+        name: song.album || "Album",
+        previousSongs: songs,
+        previousPlaylists: playlistResults,
+        previousTitle: resultTitle,
+      })
       setSongs((data.album?.song || []).map(normalizeSong))
       setPlaylistResults([])
-      setPlaylistView(null)
-      setResultTitle(song.album || "Album")
+      setResultTitle(`Album ${song.album || ""}`.trim())
       setStatus(`Album: ${song.album}`)
       setMenu(null)
     } catch (err) {
@@ -641,9 +650,38 @@ function App() {
   }
 
   async function showArtist(song) {
-    setQuery(song.artist)
-    setStatus(`Artist: ${song.artist}`)
-    setMenu(null)
+    if (!song.artist) {
+      setStatus("Kein Artist fuer diesen Song gefunden.")
+      return
+    }
+    try {
+      setStatus(`Lade Artist: ${song.artist}`)
+      const data = await subsonic(
+        "search3",
+        {
+          query: song.artist,
+          artistCount: 0,
+          albumCount: 0,
+          songCount: 80,
+        },
+        auth,
+      )
+      setPlaylistView({
+        type: "artist",
+        id: song.artistId || song.artist,
+        name: song.artist,
+        previousSongs: songs,
+        previousPlaylists: playlistResults,
+        previousTitle: resultTitle,
+      })
+      setSongs((data.searchResult3?.song || []).map(normalizeSong))
+      setPlaylistResults([])
+      setResultTitle(`Artist ${song.artist}`)
+      setStatus("")
+      setMenu(null)
+    } catch (err) {
+      setStatus(err.message)
+    }
   }
 
   async function loadPlaylists() {
@@ -701,7 +739,7 @@ function App() {
   }
 
   async function removeFromPlaylist(index) {
-    if (!playlistView) return
+    if (!isEditablePlaylist) return
     try {
       await subsonic("updatePlaylist", { playlistId: playlistView.id, songIndexToRemove: index }, auth)
       setSongs((items) => items.filter((_, itemIndex) => itemIndex !== index))
@@ -780,7 +818,7 @@ function App() {
   }
 
   async function savePlaylistOrder(nextSongs) {
-    if (!playlistView) return
+    if (!isEditablePlaylist) return
     try {
       await subsonic("createPlaylist", { playlistId: playlistView.id, songId: nextSongs.map((song) => song.id) }, auth)
       setStatus("Playlist umsortiert.")
@@ -790,7 +828,7 @@ function App() {
   }
 
   function movePlaylistItem(fromIndex, toIndex) {
-    if (!playlistView || fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return
+    if (!isEditablePlaylist || fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return
     setSongs((items) => {
       if (fromIndex >= items.length || toIndex >= items.length) return items
       const nextItems = [...items]
@@ -875,7 +913,7 @@ function App() {
   }
 
   function beginPlaylistDrag(index, event) {
-    if (!playlistView) return
+    if (!isEditablePlaylist) return
     event.preventDefault()
     const updateDrag = (clientX, clientY) => {
       setDragState({
@@ -1077,12 +1115,12 @@ function App() {
                 song={song}
                 index={index}
                 auth={auth}
-                playlistMode={Boolean(playlistView)}
-                dragging={dragState?.type === "playlist" && dragState.fromIndex === index}
+                playlistMode={isEditablePlaylist}
+                dragging={isEditablePlaylist && dragState?.type === "playlist" && dragState.fromIndex === index}
                 dropPosition={
-                  dragState?.type === "playlist" && dragState.insertIndex === index
+                  isEditablePlaylist && dragState?.type === "playlist" && dragState.insertIndex === index
                     ? "before"
-                    : dragState?.type === "playlist" && dragState.insertIndex === songs.length && index === songs.length - 1
+                    : isEditablePlaylist && dragState?.type === "playlist" && dragState.insertIndex === songs.length && index === songs.length - 1
                       ? "after"
                       : ""
                 }
@@ -1091,7 +1129,7 @@ function App() {
                 onMove={movePlaylistItem}
                 onPointerDragStart={(event) => beginPlaylistDrag(index, event)}
                 onMenu={() => {
-                  setMenu({ type: playlistView ? "playlistSong" : "song", song, index })
+                  setMenu({ type: isEditablePlaylist ? "playlistSong" : "song", song, index })
                   loadPlaylists()
                 }}
               />
@@ -1400,7 +1438,13 @@ function ActionMenu({
           </>
         )}
 
-        {(menu.type === "song" || menu.type === "playlistSong") && <button type="button" onClick={onInsertAfter}>Einfügen</button>}
+        {(menu.type === "song" || menu.type === "playlistSong") && (
+          <>
+            <button type="button" onClick={onInsertAfter}>Einfügen</button>
+            <button type="button" onClick={onShowAlbum}>Zeige Album</button>
+            <button type="button" onClick={onShowArtist}>Zeige Artist</button>
+          </>
+        )}
 
         {menu.type === "playlistSong" && (
           <button type="button" onClick={onRemoveFromPlaylist}>
