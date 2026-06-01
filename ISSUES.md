@@ -10,6 +10,30 @@
     Gefällt ein Lied nicht besonders gut, wird es typischerweise geskippt. 
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
+46. Das Menü zum Button [Treffer] zeigt als Titel "Verlauf" statt "Treffer". 
+47. Das Verschieben der Songs im Verlauf funktioniert nicht. 
+48. Optisch würde ich mir die Listeneinträge im Verlauf monolithisch vorstellen. 
+    Also ein großes abgerundetes Rechteck. Links die Handle Punkte, rechts die Menüpunkte. 
+    Ohne abtrennungen zum mittleren Teil, dem Songnamen (der auch klickbar ist). 
+    Es muss also ein Element werden, das links die Griffpunkte zum verschieben hat, 
+    mittig kann es geklickt werden zum abspielen dieses Songs, 
+    rechts hat es einen 3-punkt für weitere Optionen. 
+49. Schließen schreibt man mit scharfem S. 
+50. Die bisherige Treffer-Liste kann auch eine Playlist sein. 
+    Dabei verändert sich der Titel von "Treffer" auf z.B. "Party". 
+    Dies erscheint, wenn man eine Playlist in der Trefferliste anklickt (bisher
+    wurde sie soforft eingefügt und abgespielt - das ist unerwartet). 
+    Mit dem großen Listen-Titel-Button z.B. [Party] gibt es dann die gewohnten optionen
+    [Alle wiedergeben]
+    [Alle einfügen]
+    [Alle anhängen]
+51. Das menü aus punkt 50 soll noch erweitert werden um den Punkt
+    [Verlauf ersetzen] - das löscht somit den Verlauf, fügt alle Songs aus 
+    Treffer/Playlist ein und startet die wiedergabe. 
+52. Der Löschen-Button X soll rechtsbündig in der Eingabezeile stehen, nicht daneben. 
+
+
+
 
 # Issues Erledigt
 
