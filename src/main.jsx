@@ -600,6 +600,21 @@ function App() {
     }
   }
 
+  async function showLikedSongs() {
+    try {
+      setStatus("Lade gelikte Songs...")
+      const data = await subsonic("getStarred2", {}, auth)
+      const likedSongs = (data.starred2?.song || []).map(normalizeSong)
+      setSongs(likedSongs)
+      setPlaylistResults([])
+      setPlaylistView(null)
+      setResultTitle("Liked")
+      setStatus("")
+    } catch (err) {
+      setStatus(err.message)
+    }
+  }
+
   async function showAlbum(song) {
     if (!song.albumId) {
       setStatus("Kein Album fuer diesen Song gefunden.")
@@ -1021,6 +1036,10 @@ function App() {
             </div>
           </>
         )}
+        <button type="button" onClick={showLikedSongs}>
+          <Heart size={24} />
+          Liked
+        </button>
         <button type="button" onClick={randomPlay}>
           <Shuffle size={24} />
           Zufall

@@ -195,7 +195,7 @@ input {
 .searchBar {
   height: 84px;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 130px 140px;
+  grid-template-columns: 40px minmax(0, 1fr) 122px 130px 140px;
   gap: 12px;
   align-items: center;
   padding: 12px 14px;
@@ -618,7 +618,7 @@ h3 {
 
   .searchBar {
     height: 76px;
-    grid-template-columns: 34px minmax(0, 1fr) 120px 120px;
+    grid-template-columns: 34px minmax(0, 1fr) 112px 120px 120px;
     padding: 8px 12px;
   }
 
