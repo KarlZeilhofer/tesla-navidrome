@@ -7,6 +7,18 @@
     Für kurze Wiedergabepause ist es aktuell unbrauchbar, wäre aber sehr wichtig.
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
+54. Das "öffnen" einer Playlist ist verwirrend, weil es einerseits den expliziten button gibt, 
+    aber man kann auch in natürlicher form direkt auf den playlistnamen klicken. 
+    ich würde vorschlagen, den button einfach wegzulassen. 
+55. Wenn eine Playlist geöffnet wurde, dann soll statt der Eingabeleiste ein 
+    [Zurcük] Button erscheinen. Damit kommt man wieder zu der Treffer-Liste. 
+56. Wenn die Trefferliste leer ist, muss der Button [Treffer] ausgegraut sein. 
+57. Der Zufall-Button soll 30 zufällige Lieder laden, nicht nur 8. 
+58. Wenn eine Playlist geladen ist, müssen die Listeneinträge links auch solche
+    verschiebe-griffe haben, damit man die Playlist umsortieren kann. 
+59. Wenn eine Playlist geladen ist, braucht das 3-punkt Menü zusätzlich den Eintrag
+    [Aus der Playlist entfernen]
+60. Statt [Einfügen nach dem aktuellen Song] einfach nur [Einfügen]. 
 
 
 # Issues Erledigt
