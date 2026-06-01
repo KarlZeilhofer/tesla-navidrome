@@ -7,6 +7,12 @@
     Für kurze Wiedergabepause ist es aktuell unbrauchbar, wäre aber sehr wichtig.
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
+63. In der Trefferliste müssen im 3-punkt Menü auch die Einträge
+    [Zeige Artist] und
+    [Zeige Album] gelistet sein, mit identischer Funktion wie für Songs im Verlauf. 
+    Die Liste heißt dann z.b. "Album Best of Beatles" oder "Artist Mozart". 
+    Es erscheint wiederum der Zurückbutton. 
+
 
 # Issues Erledigt
 
