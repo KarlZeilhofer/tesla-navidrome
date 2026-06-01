@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-cd "$(dirname "$0")/.."
+cd /root/git/tesla-navidrome
 PATH=/usr/local/node-v24.16.0/bin:$PATH npm install
 PATH=/usr/local/node-v24.16.0/bin:$PATH npm run build
 install -d -m 0755 /var/www/tesla-navidrome

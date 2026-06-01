@@ -1,10 +1,39 @@
 :root {
-  color-scheme: dark;
+  color-scheme: dark light;
+  --bg: #0f1418;
+  --panel: #141d23;
+  --panel-strong: #121a20;
+  --button: #1e2a31;
+  --button-strong: #d9f2ff;
+  --button-strong-text: #071017;
+  --border: #26343c;
+  --border-strong: #334650;
+  --text: #f2f7f9;
+  --muted: #99acb6;
+  --accent: #8fe3ff;
+  --liked: #ff8fa3;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #0f1418;
-  color: #f2f7f9;
+  background: var(--bg);
+  color: var(--text);
   font-size: 18px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f2f5f6;
+    --panel: #ffffff;
+    --panel-strong: #e9eef1;
+    --button: #e6edf1;
+    --button-strong: #12313f;
+    --button-strong-text: #ffffff;
+    --border: #c8d4da;
+    --border-strong: #aabac2;
+    --text: #0e171d;
+    --muted: #556873;
+    --accent: #0c6f91;
+    --liked: #bb3150;
+  }
 }
 
 * {
@@ -15,7 +44,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #0f1418;
+  background: var(--bg);
 }
 
 button,
@@ -26,10 +55,14 @@ input {
 button {
   min-width: 100px;
   min-height: 60px;
-  border: 1px solid #334650;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #1e2a31;
-  color: #f2f7f9;
+  background: var(--button);
+  color: var(--text);
+}
+
+button:disabled {
+  opacity: 0.45;
 }
 
 button:active {
@@ -38,10 +71,10 @@ button:active {
 
 input {
   min-height: 60px;
-  border: 1px solid #334650;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  background: #111b21;
-  color: #f2f7f9;
+  background: var(--panel-strong);
+  color: var(--text);
   font-size: 25px;
 }
 
@@ -53,29 +86,39 @@ input {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: #0f1418;
+  background: var(--bg);
 }
 
 .playerBar {
   height: 92px;
   display: grid;
-  grid-template-columns: 100px 112px 100px minmax(0, 1fr) 150px;
+  grid-template-columns: 92px 104px 92px minmax(0, 1fr) 112px 150px;
   gap: 10px;
   align-items: center;
   padding: 10px 14px;
-  border-bottom: 1px solid #26343c;
-  background: #121a20;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-strong);
 }
 
 .iconButton,
-.playButton {
+.playButton,
+.likeNow {
   display: grid;
   place-items: center;
 }
 
 .playButton {
-  background: #d9f2ff;
-  color: #071017;
+  background: var(--button-strong);
+  color: var(--button-strong-text);
+}
+
+.likeNow {
+  gap: 2px;
+  font-size: 14px;
+}
+
+.liked {
+  color: var(--liked);
 }
 
 .nowPlaying {
@@ -84,7 +127,7 @@ input {
 
 .nowPlaying strong,
 .songText strong,
-.queueItem strong {
+.verlaufItem strong {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -95,12 +138,12 @@ input {
 
 .nowPlaying span,
 .songText span,
-.queueItem span,
+.verlaufItem span,
 .sectionHeader span,
 .status {
   display: block;
   overflow: hidden;
-  color: #99acb6;
+  color: var(--muted);
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -110,11 +153,11 @@ input {
   width: 100%;
   min-height: 18px;
   margin-top: 8px;
-  accent-color: #8fe3ff;
+  accent-color: var(--accent);
 }
 
 .clock {
-  color: #c5d3da;
+  color: var(--muted);
   font-size: 18px;
   text-align: right;
 }
@@ -122,11 +165,11 @@ input {
 .searchBar {
   height: 84px;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 120px 140px;
+  grid-template-columns: 40px minmax(0, 1fr) 180px 130px 130px;
   gap: 12px;
   align-items: center;
   padding: 12px 14px;
-  border-bottom: 1px solid #26343c;
+  border-bottom: 1px solid var(--border);
 }
 
 .searchBar input {
@@ -134,6 +177,7 @@ input {
   padding: 0 18px;
 }
 
+.searchBar button,
 .secondaryButton,
 .actionButton {
   display: flex;
@@ -146,18 +190,18 @@ input {
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 330px;
+  grid-template-columns: minmax(0, 1fr) 350px;
   gap: 14px;
   padding: 14px;
 }
 
 .results,
-.queue {
+.verlauf {
   min-height: 0;
   overflow: hidden;
-  border: 1px solid #26343c;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #141d23;
+  background: var(--panel);
 }
 
 .sectionHeader {
@@ -167,21 +211,39 @@ input {
   justify-content: space-between;
   gap: 14px;
   padding: 0 14px;
-  border-bottom: 1px solid #26343c;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
 }
 
-h2 {
+.buttonHeader {
+  width: 100%;
+}
+
+h2,
+h3 {
   margin: 0;
   font-size: 25px;
 }
 
+h3 {
+  font-size: 18px;
+}
+
 .songList,
-.queue {
+.verlaufList {
   overflow-y: auto;
 }
 
 .songList {
   height: calc(100% - 54px);
+}
+
+.verlaufList {
+  height: calc(100% - 54px);
+  padding-bottom: 10px;
 }
 
 .songRow {
@@ -191,7 +253,7 @@ h2 {
   gap: 10px;
   align-items: center;
   padding: 8px 10px;
-  border-bottom: 1px solid #24323a;
+  border-bottom: 1px solid var(--border);
 }
 
 .coverButton {
@@ -220,45 +282,37 @@ h2 {
   padding: 0 10px;
 }
 
-.liked {
-  color: #ff8fa3;
-}
-
-.queue {
-  padding-bottom: 10px;
-}
-
-.queueItem {
+.verlaufItem {
   width: calc(100% - 20px);
   margin: 8px 10px 0;
   padding: 8px 12px;
   text-align: left;
 }
 
-.queueItem.active {
-  border-color: #8fe3ff;
-  background: #203945;
+.verlaufItem.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent), transparent 82%);
 }
 
 .loginScreen {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background: #0f1418;
+  display: block;
+  padding: 28px 24px;
+  background: var(--bg);
 }
 
 .loginPanel {
   width: min(640px, 100%);
-  border: 1px solid #26343c;
+  margin: 0 auto;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #141d23;
+  background: var(--panel);
   padding: 28px;
 }
 
 .eyebrow {
   margin: 0 0 8px;
-  color: #8fb7c7;
+  color: var(--accent);
   font-size: 14px;
   text-transform: uppercase;
 }
@@ -278,25 +332,99 @@ h2 {
   padding: 0 18px;
 }
 
-.loginPanel button {
+.passwordField {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px;
+  gap: 10px;
+}
+
+.loginPanel button[type="submit"] {
   width: 100%;
-  background: #d9f2ff;
-  color: #071017;
+  background: var(--button-strong);
+  color: var(--button-strong-text);
 }
 
 .status {
   margin: 16px 0 0;
 }
 
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(0 0 0 / 0.55);
+}
+
+.actionSheet {
+  width: min(760px, 100%);
+  max-height: min(820px, calc(100vh - 48px));
+  overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 18px;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.35);
+}
+
+.actionSheet header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.actionSheet > button,
+.playlistList button,
+.newPlaylist button {
+  width: 100%;
+  margin-top: 10px;
+  justify-content: flex-start;
+  padding: 0 18px;
+}
+
+.playlistBox {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.playlistList {
+  display: grid;
+  gap: 8px;
+}
+
+.playlistList button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.newPlaylist {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.newPlaylist button {
+  margin-top: 0;
+  justify-content: center;
+}
+
 @media (max-height: 620px) {
   .playerBar {
     height: 82px;
-    grid-template-columns: 92px 104px 92px minmax(0, 1fr) 122px;
+    grid-template-columns: 82px 96px 82px minmax(0, 1fr) 100px 120px;
     padding: 8px 12px;
   }
 
   .searchBar {
     height: 76px;
+    grid-template-columns: 34px minmax(0, 1fr) 160px 120px 120px;
     padding: 8px 12px;
   }
 
@@ -306,5 +434,9 @@ h2 {
 
   .songRow {
     min-height: 76px;
+  }
+
+  .loginScreen {
+    padding-top: 12px;
   }
 }
