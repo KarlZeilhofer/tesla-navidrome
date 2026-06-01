@@ -130,6 +130,13 @@ function normalizePlaylist(playlist) {
   }
 }
 
+function matchesPlaylistQuery(playlist, query) {
+  const normalizedQuery = query.trim().toLocaleLowerCase()
+  if (!normalizedQuery) return false
+  if ("playlist".startsWith(normalizedQuery)) return true
+  return playlist.name.toLocaleLowerCase().includes(normalizedQuery)
+}
+
 function loadSavedState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")
@@ -328,7 +335,7 @@ function App() {
         setPlaylistResults(
           (playlistData.playlists?.playlist || [])
             .map(normalizePlaylist)
-            .filter((playlist) => playlist.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())),
+            .filter((playlist) => matchesPlaylistQuery(playlist, query)),
         )
         setStatus("")
       } catch (err) {
