@@ -549,11 +549,17 @@ h3 {
 }
 
 .actionSheet header {
+  position: sticky;
+  top: -18px;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 130px;
   gap: 14px;
   align-items: center;
-  margin-bottom: 14px;
+  margin: -18px -18px 14px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
 }
 
 .actionSheet > button,
