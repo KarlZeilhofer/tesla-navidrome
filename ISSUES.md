@@ -7,9 +7,6 @@
     Für kurze Wiedergabepause ist es aktuell unbrauchbar, wäre aber sehr wichtig.
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
-75. [Logout] darf nur den aktuellen User abmelden, nicht alle. 
-    Solange noch User angemeldet sind, bleibt der "Benutzer" Dialog offen, anstatt zum Login zu springen. 
-
 # Issues Erledigt
 
 1. Auto continue, wenn app wieder gestartet wird (erneutes einsteigen in das fahzeug)
@@ -167,3 +164,5 @@
     Die Verlaufsliste muss lokal für jeden User separat im Browser gespeichert bleiben.
 73. Der Button [user] soll rechtsbündig angeordnet sein, also mit Abstand zum Button [Zufall]
 74. Die Buttons in der Dialogbox für "Benutzer" haben kein einheitliches Spacing.
+75. [Logout] darf nur den aktuellen User abmelden, nicht alle.
+    Solange noch User angemeldet sind, bleibt der "Benutzer" Dialog offen, anstatt zum Login zu springen.

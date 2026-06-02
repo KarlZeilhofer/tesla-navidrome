@@ -27,37 +27,53 @@ const STORAGE_KEY = "teslaNavidromeState"
 const THEME_KEY = "teslaNavidromeTheme"
 const SKIP_STATS_KEY = "teslaNavidromeSkipStats"
 const USER_PROFILES_KEY = "teslaNavidromeUserProfiles"
+const CURRENT_AUTH_KEY = "teslaNavidromeCurrentAuth"
 const MIN_FUTURE = 8
 const MAX_HISTORY = 200
-const AUTH_KEYS = [
-  "token",
-  "userId",
-  "name",
-  "username",
-  "avatar",
-  "role",
-  "subsonic-salt",
-  "subsonic-token",
-  "is-authenticated",
-]
+
+function normalizeAuthProfile(profile) {
+  if (!profile?.username) {
+    return {
+      jwt: "",
+      username: "",
+      salt: "",
+      subsonicToken: "",
+      name: "",
+      isAuthenticated: false,
+    }
+  }
+  const username = profile.username || ""
+  const name = profile.name || username
+  const jwt = profile.jwt || profile.token || ""
+  const salt = profile.salt || profile.subsonicSalt || profile["subsonic-salt"] || ""
+  const subsonicToken = profile.subsonicToken || profile["subsonic-token"] || ""
+  return {
+    ...profile,
+    jwt,
+    token: profile.token || jwt,
+    userId: profile.userId || profile.id || "",
+    username,
+    name,
+    salt,
+    subsonicToken,
+    isAuthenticated: profile.isAuthenticated !== false && Boolean(username && salt && subsonicToken),
+  }
+}
 
 function authState() {
-  return {
-    jwt: localStorage.getItem("token") || "",
-    username: localStorage.getItem("username") || "",
-    salt: localStorage.getItem("subsonic-salt") || "",
-    subsonicToken: localStorage.getItem("subsonic-token") || "",
-    name: localStorage.getItem("name") || localStorage.getItem("username") || "",
-    isAuthenticated: localStorage.getItem("is-authenticated") === "true",
+  try {
+    const profile = JSON.parse(localStorage.getItem(CURRENT_AUTH_KEY) || "null")
+    if (profile?.username) return normalizeAuthProfile(profile)
+  } catch {
+    localStorage.removeItem(CURRENT_AUTH_KEY)
   }
+  return normalizeAuthProfile(loadUserProfiles()[0])
 }
 
 function currentAuthProfile() {
   const auth = authState()
   if (!auth.username) return null
-  const profile = { ...auth }
-  for (const key of AUTH_KEYS) profile[key] = localStorage.getItem(key) || ""
-  return profile
+  return normalizeAuthProfile(auth)
 }
 
 function loadUserProfiles() {
@@ -73,38 +89,49 @@ function saveUserProfiles(profiles) {
   localStorage.setItem(USER_PROFILES_KEY, JSON.stringify(profiles))
 }
 
-function rememberCurrentAuthProfile() {
-  const profile = currentAuthProfile()
+function removeUserProfile(username) {
+  const nextProfiles = loadUserProfiles().filter((profile) => profile.username !== username)
+  saveUserProfiles(nextProfiles)
+  return nextProfiles
+}
+
+function saveCurrentAuthProfile(profile) {
+  localStorage.setItem(CURRENT_AUTH_KEY, JSON.stringify(normalizeAuthProfile(profile)))
+}
+
+function rememberCurrentAuthProfile(profile = currentAuthProfile()) {
   if (!profile) return loadUserProfiles()
+  const normalizedProfile = normalizeAuthProfile(profile)
+  saveCurrentAuthProfile(normalizedProfile)
   const profiles = loadUserProfiles().filter((item) => item.username !== profile.username)
-  const nextProfiles = [{ ...profile, savedAt: Date.now() }, ...profiles]
+  const nextProfiles = [{ ...normalizedProfile, savedAt: Date.now() }, ...profiles]
   saveUserProfiles(nextProfiles)
   return nextProfiles
 }
 
 function activateUserProfile(profile) {
-  for (const key of AUTH_KEYS) {
-    if (profile[key]) localStorage.setItem(key, profile[key])
-    else localStorage.removeItem(key)
-  }
-  localStorage.setItem("is-authenticated", "true")
+  saveCurrentAuthProfile(profile)
 }
 
 function storeAuth(data) {
-  if (data.token) localStorage.setItem("token", data.token)
-  localStorage.setItem("userId", data.id)
-  localStorage.setItem("name", data.name || data.username)
-  localStorage.setItem("username", data.username)
-  if (data.avatar) localStorage.setItem("avatar", data.avatar)
-  localStorage.setItem("role", data.isAdmin ? "admin" : "regular")
-  localStorage.setItem("subsonic-salt", data.subsonicSalt)
-  localStorage.setItem("subsonic-token", data.subsonicToken)
-  localStorage.setItem("is-authenticated", "true")
-  rememberCurrentAuthProfile()
+  const profile = normalizeAuthProfile({
+    jwt: data.token || "",
+    token: data.token || "",
+    userId: data.id || "",
+    id: data.id || "",
+    name: data.name || data.username,
+    username: data.username,
+    avatar: data.avatar || "",
+    role: data.isAdmin ? "admin" : "regular",
+    salt: data.subsonicSalt,
+    subsonicToken: data.subsonicToken,
+    isAuthenticated: true,
+  })
+  rememberCurrentAuthProfile(profile)
 }
 
 function clearAuth() {
-  AUTH_KEYS.forEach((key) => localStorage.removeItem(key))
+  localStorage.removeItem(CURRENT_AUTH_KEY)
 }
 
 function subsonicUrl(command, params = {}, auth = authState()) {
@@ -1189,7 +1216,16 @@ function App() {
   }
 
   function logout() {
+    const nextProfiles = removeUserProfile(auth.username)
+    audioRef.current?.pause()
     clearAuth()
+    setUserProfiles(nextProfiles)
+    if (nextProfiles.length) {
+      activateUserProfile(nextProfiles[0])
+      setAuth(authState())
+      setMenu({ type: "user" })
+      return
+    }
     setAuth(authState())
     setVerlauf([])
     setSongs([])
@@ -1236,7 +1272,7 @@ function App() {
             </div>
             <button type="submit">Einloggen</button>
           </form>
-          <p className="status">{status || "Oder zuerst in /app einloggen, dann /tesla neu laden."}</p>
+          <p className="status">{status || "Mit einem Navidrome-Benutzer anmelden."}</p>
         </section>
       </main>
     )
