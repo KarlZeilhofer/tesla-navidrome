@@ -530,15 +530,17 @@ h3 {
   inset: 0;
   z-index: 20;
   display: grid;
-  place-items: center;
-  padding: 24px;
+  align-items: start;
+  justify-items: center;
+  padding: 14px 24px 24px;
   background: rgb(0 0 0 / 0.55);
 }
 
 .actionSheet {
   width: min(760px, 100%);
-  max-height: min(820px, calc(100vh - 48px));
+  max-height: min(550px, calc(100vh - 28px));
   overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   background: var(--panel);
