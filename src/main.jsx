@@ -26,8 +26,20 @@ const API_VERSION = "1.16.1"
 const STORAGE_KEY = "teslaNavidromeState"
 const THEME_KEY = "teslaNavidromeTheme"
 const SKIP_STATS_KEY = "teslaNavidromeSkipStats"
+const USER_PROFILES_KEY = "teslaNavidromeUserProfiles"
 const MIN_FUTURE = 8
 const MAX_HISTORY = 200
+const AUTH_KEYS = [
+  "token",
+  "userId",
+  "name",
+  "username",
+  "avatar",
+  "role",
+  "subsonic-salt",
+  "subsonic-token",
+  "is-authenticated",
+]
 
 function authState() {
   return {
@@ -40,6 +52,44 @@ function authState() {
   }
 }
 
+function currentAuthProfile() {
+  const auth = authState()
+  if (!auth.username) return null
+  const profile = { ...auth }
+  for (const key of AUTH_KEYS) profile[key] = localStorage.getItem(key) || ""
+  return profile
+}
+
+function loadUserProfiles() {
+  try {
+    const profiles = JSON.parse(localStorage.getItem(USER_PROFILES_KEY) || "[]")
+    return Array.isArray(profiles) ? profiles.filter((profile) => profile?.username) : []
+  } catch {
+    return []
+  }
+}
+
+function saveUserProfiles(profiles) {
+  localStorage.setItem(USER_PROFILES_KEY, JSON.stringify(profiles))
+}
+
+function rememberCurrentAuthProfile() {
+  const profile = currentAuthProfile()
+  if (!profile) return loadUserProfiles()
+  const profiles = loadUserProfiles().filter((item) => item.username !== profile.username)
+  const nextProfiles = [{ ...profile, savedAt: Date.now() }, ...profiles]
+  saveUserProfiles(nextProfiles)
+  return nextProfiles
+}
+
+function activateUserProfile(profile) {
+  for (const key of AUTH_KEYS) {
+    if (profile[key]) localStorage.setItem(key, profile[key])
+    else localStorage.removeItem(key)
+  }
+  localStorage.setItem("is-authenticated", "true")
+}
+
 function storeAuth(data) {
   if (data.token) localStorage.setItem("token", data.token)
   localStorage.setItem("userId", data.id)
@@ -50,22 +100,11 @@ function storeAuth(data) {
   localStorage.setItem("subsonic-salt", data.subsonicSalt)
   localStorage.setItem("subsonic-token", data.subsonicToken)
   localStorage.setItem("is-authenticated", "true")
+  rememberCurrentAuthProfile()
 }
 
 function clearAuth() {
-  for (const key of [
-    "token",
-    "userId",
-    "name",
-    "username",
-    "avatar",
-    "role",
-    "subsonic-salt",
-    "subsonic-token",
-    "is-authenticated",
-  ]) {
-    localStorage.removeItem(key)
-  }
+  AUTH_KEYS.forEach((key) => localStorage.removeItem(key))
 }
 
 function subsonicUrl(command, params = {}, auth = authState()) {
@@ -155,9 +194,23 @@ function matchesPlaylistQuery(playlist, query) {
   return playlist.name.toLocaleLowerCase().includes(normalizedQuery)
 }
 
-function loadSavedState() {
+function stateStorageKey(username) {
+  return username ? `${STORAGE_KEY}:${username}` : STORAGE_KEY
+}
+
+function loadSavedState(username = authState().username) {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}")
+    const userKey = stateStorageKey(username)
+    let raw = username ? localStorage.getItem(userKey) : localStorage.getItem(STORAGE_KEY)
+    if (!raw && username) {
+      raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        localStorage.setItem(userKey, raw)
+        localStorage.removeItem(STORAGE_KEY)
+      }
+    }
+    raw ||= "{}"
+    const saved = JSON.parse(raw)
     if (!Array.isArray(saved.verlauf)) return null
     return {
       verlauf: saved.verlauf.slice(-MAX_HISTORY - MIN_FUTURE),
@@ -170,9 +223,9 @@ function loadSavedState() {
   }
 }
 
-function saveState({ verlauf, currentIndex, position, wasPlaying }) {
+function saveState({ verlauf, currentIndex, position, wasPlaying, username }) {
   localStorage.setItem(
-    STORAGE_KEY,
+    stateStorageKey(username),
     JSON.stringify({
       verlauf: verlauf.slice(-MAX_HISTORY - MIN_FUTURE),
       currentIndex,
@@ -196,8 +249,9 @@ function saveSkipStats(stats) {
 }
 
 function App() {
-  const savedState = useMemo(loadSavedState, [])
-  const [auth, setAuth] = useState(authState)
+  const initialAuth = useMemo(authState, [])
+  const savedState = useMemo(() => loadSavedState(initialAuth.username), [initialAuth.username])
+  const [auth, setAuth] = useState(initialAuth)
   const [query, setQuery] = useState("")
   const [songs, setSongs] = useState([])
   const [playlistResults, setPlaylistResults] = useState([])
@@ -215,9 +269,11 @@ function App() {
   const [showPassword, setShowPassword] = useState(false)
   const [menu, setMenu] = useState(null)
   const [playlists, setPlaylists] = useState([])
+  const [userProfiles, setUserProfiles] = useState(loadUserProfiles)
   const [newPlaylistName, setNewPlaylistName] = useState("")
   const [dragState, setDragState] = useState(null)
   const audioRef = useRef(null)
+  const searchInputRef = useRef(null)
   const currentRowRef = useRef(null)
   const pendingSeekRef = useRef(savedState?.position || 0)
   const didRestorePositionRef = useRef(false)
@@ -323,11 +379,31 @@ function App() {
 
   useEffect(() => {
     if (auth.isAuthenticated && canUseApi) {
+      setUserProfiles(rememberCurrentAuthProfile())
       subsonic("ping", {}, auth).catch(() => {
         setStatus("Login gefunden, aber API-Zugriff fehlgeschlagen. Bitte neu einloggen.")
       })
     }
   }, [auth, canUseApi])
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || !auth.username) return
+    const nextSavedState = loadSavedState(auth.username)
+    setVerlauf(nextSavedState?.verlauf || [])
+    setCurrentIndex(nextSavedState?.currentIndex ?? -1)
+    setTime({ current: nextSavedState?.position || 0, duration: 0 })
+    pendingSeekRef.current = nextSavedState?.position || 0
+    didRestorePositionRef.current = false
+    didLoadInitialResultsRef.current = false
+    setSongs([])
+    setPlaylistResults([])
+    setAlbumResults([])
+    setArtistResults([])
+    setPlaylistView(null)
+    setResultTitle("Treffer")
+    setQuery("")
+    setSearchMode("home")
+  }, [auth.username])
 
   useEffect(() => {
     if (playlistView) return
@@ -386,13 +462,15 @@ function App() {
   }, [currentIndex, verlauf.length])
 
   useEffect(() => {
+    if (!auth.username) return
     saveState({
       verlauf,
       currentIndex,
       position: audioRef.current?.currentTime || time.current || 0,
       wasPlaying: isPlaying,
+      username: auth.username,
     })
-  }, [currentIndex, isPlaying, time.current, verlauf])
+  }, [auth.username, currentIndex, isPlaying, time.current, verlauf])
 
   useEffect(() => {
     currentRowRef.current?.scrollIntoView({ block: "center", behavior: "smooth" })
@@ -402,6 +480,11 @@ function App() {
     document.documentElement.dataset.theme = theme
     localStorage.setItem(THEME_KEY, theme)
   }, [theme])
+
+  useEffect(() => {
+    if (searchMode !== "search") return
+    window.setTimeout(() => searchInputRef.current?.focus(), 0)
+  }, [searchMode])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -1117,6 +1200,21 @@ function App() {
     setMenu(null)
   }
 
+  function switchUser(profile) {
+    if (!profile?.username) return
+    audioRef.current?.pause()
+    activateUserProfile(profile)
+    setAuth(authState())
+    setMenu(null)
+  }
+
+  function loginAnotherUser() {
+    audioRef.current?.pause()
+    clearAuth()
+    setAuth(authState())
+    setMenu(null)
+  }
+
   if (!auth.isAuthenticated || !canUseApi) {
     return (
       <main className="loginScreen">
@@ -1204,7 +1302,12 @@ function App() {
           <>
             <Search size={30} />
             <div className="searchField">
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Suche nach Titel, Album, Künstler oder Playlist" />
+              <input
+                ref={searchInputRef}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Suche nach Titel, Album, Künstler oder Playlist"
+              />
               {query && (
                 <button type="button" onClick={() => setQuery("")} aria-label="Suche löschen">
                   <X size={28} />
@@ -1370,6 +1473,10 @@ function App() {
           onReplaceResults={replaceVerlaufWithResults}
           resultTitle={resultTitle}
           onLogout={logout}
+          userProfiles={userProfiles}
+          currentUsername={auth.username}
+          onSwitchUser={switchUser}
+          onLoginAnotherUser={loginAnotherUser}
           onAddVerlaufPlaylist={addVerlaufToPlaylist}
           onCreateVerlaufPlaylist={createPlaylistWithVerlauf}
           onRemoveDisliked={removeDislikedSongs}
@@ -1582,6 +1689,10 @@ function ActionMenu({
   onReplaceResults,
   resultTitle,
   onLogout,
+  userProfiles,
+  currentUsername,
+  onSwitchUser,
+  onLoginAnotherUser,
   onAddVerlaufPlaylist,
   onCreateVerlaufPlaylist,
   onRemoveDisliked,
@@ -1638,6 +1749,21 @@ function ActionMenu({
 
         {menu.type === "user" && (
           <>
+            <div className="playlistBox userProfiles">
+              <h3>Benutzer</h3>
+              <div className="playlistList">
+                {userProfiles.map((profile) => (
+                  <button
+                    className={profile.username === currentUsername ? "selected" : ""}
+                    key={profile.username}
+                    type="button"
+                    onClick={() => onSwitchUser(profile)}
+                  >
+                    {profile.name || profile.username}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="themeButtons">
               <button className={theme === "auto" ? "selected" : ""} type="button" onClick={() => onThemeChange("auto")}>
                 Auto
@@ -1649,6 +1775,9 @@ function ActionMenu({
                 Light
               </button>
             </div>
+            <button type="button" onClick={onLoginAnotherUser}>
+              Anmelden
+            </button>
             <button type="button" onClick={onLogout}>
               <LogOut size={28} />
               Logout

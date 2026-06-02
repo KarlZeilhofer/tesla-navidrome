@@ -616,6 +616,11 @@ h3 {
   gap: 12px;
 }
 
+.playlistList .selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent), transparent 80%);
+}
+
 .newPlaylist {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px;
