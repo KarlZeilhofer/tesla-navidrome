@@ -202,7 +202,7 @@ input {
 .searchBar {
   height: 84px;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 118px 122px 130px 140px;
+  grid-template-columns: 40px minmax(0, 1fr) 118px 122px 130px 24px 140px;
   gap: 12px;
   align-items: center;
   padding: 12px 14px;
@@ -393,7 +393,12 @@ h3 {
 }
 
 .userButton {
+  width: 100%;
   text-transform: none;
+}
+
+.userButtonSlot {
+  grid-column: 7;
 }
 
 .verlaufRow {
@@ -639,6 +644,19 @@ h3 {
   gap: 10px;
 }
 
+.userMenuActions {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.userMenuActions > button {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0 18px;
+  font-size: 25px;
+}
+
 .themeButtons button {
   min-width: 0;
   font-size: 25px;
@@ -663,7 +681,7 @@ h3 {
 
   .searchBar {
     height: 76px;
-    grid-template-columns: 34px minmax(0, 1fr) 108px 112px 120px 120px;
+    grid-template-columns: 34px minmax(0, 1fr) 108px 112px 120px 18px 120px;
     padding: 8px 12px;
   }
 

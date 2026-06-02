@@ -1343,9 +1343,11 @@ function App() {
           <Shuffle size={24} />
           Zufall
         </button>
-        <button className="secondaryButton userButton" type="button" onClick={() => setMenu({ type: "user" })}>
-          {auth.username || auth.name}
-        </button>
+        <div className="userButtonSlot">
+          <button className="secondaryButton userButton" type="button" onClick={() => setMenu({ type: "user" })}>
+            {auth.username || auth.name}
+          </button>
+        </div>
       </section>
 
       <section className="content">
@@ -1764,24 +1766,26 @@ function ActionMenu({
                 ))}
               </div>
             </div>
-            <div className="themeButtons">
-              <button className={theme === "auto" ? "selected" : ""} type="button" onClick={() => onThemeChange("auto")}>
-                Auto
+            <div className="userMenuActions">
+              <div className="themeButtons">
+                <button className={theme === "auto" ? "selected" : ""} type="button" onClick={() => onThemeChange("auto")}>
+                  Auto
+                </button>
+                <button className={theme === "dark" ? "selected" : ""} type="button" onClick={() => onThemeChange("dark")}>
+                  Dark
+                </button>
+                <button className={theme === "light" ? "selected" : ""} type="button" onClick={() => onThemeChange("light")}>
+                  Light
+                </button>
+              </div>
+              <button type="button" onClick={onLoginAnotherUser}>
+                Anmelden
               </button>
-              <button className={theme === "dark" ? "selected" : ""} type="button" onClick={() => onThemeChange("dark")}>
-                Dark
-              </button>
-              <button className={theme === "light" ? "selected" : ""} type="button" onClick={() => onThemeChange("light")}>
-                Light
+              <button type="button" onClick={onLogout}>
+                <LogOut size={28} />
+                Logout
               </button>
             </div>
-            <button type="button" onClick={onLoginAnotherUser}>
-              Anmelden
-            </button>
-            <button type="button" onClick={onLogout}>
-              <LogOut size={28} />
-              Logout
-            </button>
           </>
         )}
 

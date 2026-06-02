@@ -7,10 +7,6 @@
     Für kurze Wiedergabepause ist es aktuell unbrauchbar, wäre aber sehr wichtig.
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
-73. Der Button [user] soll rechtsbündig angeordnet sein, also mit Abstand zum Button [Zufall]
-74. Die Buttons in der Dialogbox für "Benutzer" haben kein einheitliches Spacing. 
-
-
 # Issues Erledigt
 
 1. Auto continue, wenn app wieder gestartet wird (erneutes einsteigen in das fahzeug)
@@ -166,3 +162,5 @@
     [Anmelden] braucht es auch, der zum Loginscreen führt.
     Damit soll dann ein weiterer User angemeldet werden können.
     Die Verlaufsliste muss lokal für jeden User separat im Browser gespeichert bleiben.
+73. Der Button [user] soll rechtsbündig angeordnet sein, also mit Abstand zum Button [Zufall]
+74. Die Buttons in der Dialogbox für "Benutzer" haben kein einheitliches Spacing.
