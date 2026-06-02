@@ -1762,12 +1762,23 @@ function ActionMenu({
     }, 0)
   }
 
+  function handleBackdropClick(event) {
+    if (event.target !== event.currentTarget) return
+    onClose()
+  }
+
+  function stopDialogEvent(event) {
+    event.stopPropagation()
+  }
+
   return (
-    <div className="modalBackdrop" onClick={onClose}>
+    <div className="modalBackdrop" onClick={handleBackdropClick}>
       <section
         className={actionSheetClassName}
         ref={actionSheetRef}
-        onClick={(event) => event.stopPropagation()}
+        onClick={stopDialogEvent}
+        onPointerDown={stopDialogEvent}
+        onTouchStart={stopDialogEvent}
         onFocusCapture={handleFocusCapture}
         onBlurCapture={handleBlurCapture}
       >
