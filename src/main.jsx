@@ -595,13 +595,11 @@ function App() {
         // Some Chromium builds expose Media Session but not every action.
       }
     }
-    setHandler("play", () => audioRef.current?.play())
-    setHandler("pause", () => audioRef.current?.pause())
+    setHandler("play", togglePlayback)
+    setHandler("pause", togglePlayback)
     setHandler("previoustrack", previous)
     setHandler("nexttrack", next)
-    setHandler("seekbackward", previous)
-    setHandler("seekforward", next)
-  }, [currentSong, next, previous])
+  }, [currentSong, next, previous, togglePlayback])
 
   useEffect(() => {
     const handleKey = (event) => {
