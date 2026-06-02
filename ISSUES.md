@@ -7,7 +7,19 @@
     Für kurze Wiedergabepause ist es aktuell unbrauchbar, wäre aber sehr wichtig.
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
-
+66. Ersetze den Begriff "Artist" durch "Künstler"
+67. Für einen eifachern Start möchte ich, dass du die Sucheingabezeile etwas abänderst: 
+    Nach dem Start sind 4 Buttons zu sehen: 
+    [Lupe] führt zur Sucheingabe wie bisher. Aber rechts von der Eingabezeile gibt es einen 
+      neuen Button [Zurück], dieser wechselt zurück zu den neuen 4 Buttons. 
+    [Alben] --> Listet alle Alben auf. 
+    [Künstler] --> Listet alle Künstler auf. 
+    [Playlists] --> Listet alle Playlists auf. 
+68. Nach dem Start soll eine Zufallsliste geladen werden, identisch mit dem klicken auf [Zufall]
+    Dies ist hilfreich, damit überhaupt Lieder sichtbar sind nach dem ersten Start. 
+69. Minimaler optischer Fix: die drei Haupttaster Back/PlayPause/Next sind nicht schön 
+    mit identischem Zwischenraum angeordnet, auch zum Text für den aktuellen Song fehlt
+    der Zwischenraum. Bitte mach das etwas schöner. 
 
 # Issues Erledigt
 
