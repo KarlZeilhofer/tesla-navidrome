@@ -109,7 +109,7 @@ function normalizeSong(song) {
   return {
     id: song.id,
     title: song.title || "Untitled",
-    artist: song.artist || song.albumArtist || "Unknown artist",
+    artist: song.artist || song.albumArtist || "Unbekannter Künstler",
     album: song.album || "",
     albumId: song.albumId || "",
     artistId: song.artistId || "",
@@ -127,6 +127,24 @@ function normalizePlaylist(playlist) {
     duration: playlist.duration || 0,
     coverArt: playlist.coverArt,
     owner: playlist.owner || "",
+  }
+}
+
+function normalizeAlbum(album) {
+  return {
+    id: album.id,
+    name: album.name || album.title || "Album",
+    artist: album.artist || album.albumArtist || "",
+    songCount: album.songCount || 0,
+    coverArt: album.coverArt,
+  }
+}
+
+function normalizeArtist(artist) {
+  return {
+    id: artist.id || artist.name,
+    name: artist.name || "Künstler",
+    albumCount: artist.albumCount || 0,
   }
 }
 
@@ -183,8 +201,11 @@ function App() {
   const [query, setQuery] = useState("")
   const [songs, setSongs] = useState([])
   const [playlistResults, setPlaylistResults] = useState([])
+  const [albumResults, setAlbumResults] = useState([])
+  const [artistResults, setArtistResults] = useState([])
   const [resultTitle, setResultTitle] = useState("Treffer")
   const [playlistView, setPlaylistView] = useState(null)
+  const [searchMode, setSearchMode] = useState("home")
   const [verlauf, setVerlauf] = useState(savedState?.verlauf || [])
   const [currentIndex, setCurrentIndex] = useState(savedState?.currentIndex ?? -1)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -200,6 +221,7 @@ function App() {
   const currentRowRef = useRef(null)
   const pendingSeekRef = useRef(savedState?.position || 0)
   const didRestorePositionRef = useRef(false)
+  const didLoadInitialResultsRef = useRef(false)
   const randomRefillRunning = useRef(false)
   const skipStatsRef = useRef(loadSkipStats())
   const playStartRef = useRef({ songId: "", startedAt: 0, duration: 0 })
@@ -312,6 +334,8 @@ function App() {
     if (!query.trim() || !canUseApi) {
       setSongs([])
       setPlaylistResults([])
+      setAlbumResults([])
+      setArtistResults([])
       setResultTitle("Treffer")
       return
     }
@@ -332,6 +356,8 @@ function App() {
           subsonic("getPlaylists", {}, auth),
         ])
         setSongs((data.searchResult3?.song || []).map(normalizeSong))
+        setAlbumResults((data.searchResult3?.album || []).map(normalizeAlbum))
+        setArtistResults([])
         setResultTitle("Treffer")
         setPlaylistResults(
           (playlistData.playlists?.playlist || [])
@@ -345,6 +371,12 @@ function App() {
     }, 250)
     return () => window.clearTimeout(handle)
   }, [auth, canUseApi, playlistView, query])
+
+  useEffect(() => {
+    if (!canUseApi || didLoadInitialResultsRef.current || playlistView || query.trim()) return
+    didLoadInitialResultsRef.current = true
+    randomPlay()
+  }, [canUseApi, playlistView, query])
 
   useEffect(() => {
     if (currentIndex <= MAX_HISTORY || verlauf.length <= MAX_HISTORY + MIN_FUTURE) return
@@ -563,10 +595,14 @@ function App() {
         name: playlist.name,
         previousSongs: songs,
         previousPlaylists: playlistResults,
+        previousAlbums: albumResults,
+        previousArtists: artistResults,
         previousTitle: resultTitle,
       })
       setSongs(playlistSongs)
       setPlaylistResults([])
+      setAlbumResults([])
+      setArtistResults([])
       setResultTitle(playlist.name)
       setStatus("")
     } catch (err) {
@@ -577,6 +613,8 @@ function App() {
   function closePlaylistView() {
     setSongs(playlistView?.previousSongs || [])
     setPlaylistResults(playlistView?.previousPlaylists || [])
+    setAlbumResults(playlistView?.previousAlbums || [])
+    setArtistResults(playlistView?.previousArtists || [])
     setResultTitle(playlistView?.previousTitle || "Treffer")
     setPlaylistView(null)
     setMenu(null)
@@ -601,6 +639,8 @@ function App() {
       const randomSongs = (data.randomSongs?.song || []).map(normalizeSong)
       setSongs(randomSongs)
       setPlaylistResults([])
+      setAlbumResults([])
+      setArtistResults([])
       setPlaylistView(null)
       setResultTitle("Zufall")
       setStatus("")
@@ -616,6 +656,8 @@ function App() {
       const likedSongs = (data.starred2?.song || []).map(normalizeSong)
       setSongs(likedSongs)
       setPlaylistResults([])
+      setAlbumResults([])
+      setArtistResults([])
       setPlaylistView(null)
       setResultTitle("Liked")
       setStatus("")
@@ -624,9 +666,87 @@ function App() {
     }
   }
 
+  async function showAllPlaylists() {
+    try {
+      setStatus("Lade Playlists...")
+      const data = await subsonic("getPlaylists", {}, auth)
+      setSongs([])
+      setPlaylistResults((data.playlists?.playlist || []).map(normalizePlaylist))
+      setAlbumResults([])
+      setArtistResults([])
+      setPlaylistView(null)
+      setResultTitle("Playlists")
+      setStatus("")
+    } catch (err) {
+      setStatus(err.message)
+    }
+  }
+
+  async function showAllAlbums() {
+    try {
+      setStatus("Lade Alben...")
+      const data = await subsonic("getAlbumList2", { type: "alphabeticalByName", size: 500 }, auth)
+      setSongs([])
+      setPlaylistResults([])
+      setAlbumResults((data.albumList2?.album || []).map(normalizeAlbum))
+      setArtistResults([])
+      setPlaylistView(null)
+      setResultTitle("Alben")
+      setStatus("")
+    } catch (err) {
+      setStatus(err.message)
+    }
+  }
+
+  async function showAllArtists() {
+    try {
+      setStatus("Lade Künstler...")
+      const data = await subsonic("getArtists", {}, auth)
+      const artists = (data.artists?.index || []).flatMap((index) => index.artist || []).map(normalizeArtist)
+      setSongs([])
+      setPlaylistResults([])
+      setAlbumResults([])
+      setArtistResults(artists)
+      setPlaylistView(null)
+      setResultTitle("Künstler")
+      setStatus("")
+    } catch (err) {
+      setStatus(err.message)
+    }
+  }
+
+  async function showAlbumResult(album) {
+    try {
+      setStatus(`Lade Album: ${album.name}`)
+      const data = await subsonic("getAlbum", { id: album.id }, auth)
+      setPlaylistView({
+        type: "album",
+        id: album.id,
+        name: album.name,
+        previousSongs: songs,
+        previousPlaylists: playlistResults,
+        previousAlbums: albumResults,
+        previousArtists: artistResults,
+        previousTitle: resultTitle,
+      })
+      setSongs((data.album?.song || []).map(normalizeSong))
+      setPlaylistResults([])
+      setAlbumResults([])
+      setArtistResults([])
+      setResultTitle(`Album ${album.name}`)
+      setStatus("")
+    } catch (err) {
+      setStatus(err.message)
+    }
+  }
+
+  async function showArtistResult(artist) {
+    await showArtist({ artist: artist.name, artistId: artist.id })
+  }
+
   async function showAlbum(song) {
     if (!song.albumId) {
-      setStatus("Kein Album fuer diesen Song gefunden.")
+      setStatus("Kein Album für diesen Song gefunden.")
       return
     }
     try {
@@ -637,10 +757,14 @@ function App() {
         name: song.album || "Album",
         previousSongs: songs,
         previousPlaylists: playlistResults,
+        previousAlbums: albumResults,
+        previousArtists: artistResults,
         previousTitle: resultTitle,
       })
       setSongs((data.album?.song || []).map(normalizeSong))
       setPlaylistResults([])
+      setAlbumResults([])
+      setArtistResults([])
       setResultTitle(`Album ${song.album || ""}`.trim())
       setStatus(`Album: ${song.album}`)
       setMenu(null)
@@ -651,11 +775,11 @@ function App() {
 
   async function showArtist(song) {
     if (!song.artist) {
-      setStatus("Kein Artist fuer diesen Song gefunden.")
+      setStatus("Kein Künstler für diesen Song gefunden.")
       return
     }
     try {
-      setStatus(`Lade Artist: ${song.artist}`)
+      setStatus(`Lade Künstler: ${song.artist}`)
       const data = await subsonic(
         "search3",
         {
@@ -672,11 +796,15 @@ function App() {
         name: song.artist,
         previousSongs: songs,
         previousPlaylists: playlistResults,
+        previousAlbums: albumResults,
+        previousArtists: artistResults,
         previousTitle: resultTitle,
       })
       setSongs((data.searchResult3?.song || []).map(normalizeSong))
       setPlaylistResults([])
-      setResultTitle(`Artist ${song.artist}`)
+      setAlbumResults([])
+      setArtistResults([])
+      setResultTitle(`Künstler ${song.artist}`)
       setStatus("")
       setMenu(null)
     } catch (err) {
@@ -983,6 +1111,8 @@ function App() {
     setVerlauf([])
     setSongs([])
     setPlaylistResults([])
+    setAlbumResults([])
+    setArtistResults([])
     setCurrentIndex(-1)
     setMenu(null)
   }
@@ -1030,15 +1160,17 @@ function App() {
         </div>
       )}
       <header className="playerBar">
-        <button className="iconButton" type="button" onClick={previous} aria-label="Back">
-          <SkipBack size={34} />
-        </button>
-        <button className="playButton" type="button" onClick={togglePlayback} aria-label="Play pause">
-          {isPlaying ? <Pause size={40} /> : <Play size={40} />}
-        </button>
-        <button className="iconButton" type="button" onClick={next} aria-label="Next">
-          <SkipForward size={34} />
-        </button>
+        <div className="transportControls">
+          <button className="iconButton" type="button" onClick={previous} aria-label="Back">
+            <SkipBack size={34} />
+          </button>
+          <button className="playButton" type="button" onClick={togglePlayback} aria-label="Play pause">
+            {isPlaying ? <Pause size={40} /> : <Play size={40} />}
+          </button>
+          <button className="iconButton" type="button" onClick={next} aria-label="Next">
+            <SkipForward size={34} />
+          </button>
+        </div>
         <div className="nowPlaying">
           <strong>{currentSong?.title || "Bereit"}</strong>
           <span>{currentSong ? `${currentSong.artist} - ${currentSong.album}` : `Angemeldet als ${auth.name}`}</span>
@@ -1068,18 +1200,37 @@ function App() {
             <ArrowLeft size={30} />
             Zurück
           </button>
-        ) : (
+        ) : searchMode === "search" ? (
           <>
             <Search size={30} />
             <div className="searchField">
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Suche nach Titel, Album, Artist oder Playlist" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Suche nach Titel, Album, Künstler oder Playlist" />
               {query && (
                 <button type="button" onClick={() => setQuery("")} aria-label="Suche löschen">
                   <X size={28} />
                 </button>
               )}
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("")
+                setSearchMode("home")
+              }}
+            >
+              <ArrowLeft size={24} />
+              Zurück
+            </button>
           </>
+        ) : (
+          <div className="quickButtons">
+            <button type="button" onClick={() => setSearchMode("search")} aria-label="Suche">
+              <Search size={26} />
+            </button>
+            <button type="button" onClick={showAllAlbums}>Alben</button>
+            <button type="button" onClick={showAllArtists}>Künstler</button>
+            <button type="button" onClick={showAllPlaylists}>Playlists</button>
+          </div>
         )}
         <button type="button" onClick={showLikedSongs}>
           <Heart size={24} />
@@ -1099,15 +1250,24 @@ function App() {
           <button
             className="sectionHeader buttonHeader"
             type="button"
-            disabled={!songs.length && !playlistResults.length}
+            disabled={!songs.length && !playlistResults.length && !albumResults.length && !artistResults.length}
             onClick={() => setMenu({ type: "results" })}
           >
             <h2>{resultTitle}</h2>
-            <span>{status || `${songs.length} Songs / ${playlistResults.length} Playlists`}</span>
+            <span>
+              {status ||
+                `${songs.length} Songs / ${albumResults.length} Alben / ${artistResults.length} Künstler / ${playlistResults.length} Playlists`}
+            </span>
           </button>
           <div className="songList">
             {playlistResults.map((playlist) => (
               <PlaylistRow key={playlist.id} playlist={playlist} auth={auth} onSelect={() => showPlaylist(playlist)} />
+            ))}
+            {albumResults.map((album) => (
+              <AlbumRow key={album.id} album={album} auth={auth} onSelect={() => showAlbumResult(album)} />
+            ))}
+            {artistResults.map((artist) => (
+              <ArtistRow key={artist.id} artist={artist} onSelect={() => showArtistResult(artist)} />
             ))}
             {songs.map((song, index) => (
               <SongRow
@@ -1319,6 +1479,35 @@ function PlaylistRow({ playlist, auth, onSelect }) {
   )
 }
 
+function AlbumRow({ album, auth, onSelect }) {
+  const coverUrl = album.coverArt ? subsonicUrl("getCoverArt", { id: album.coverArt, size: 96, square: true }, auth) : ""
+  return (
+    <article className="songRow albumRow">
+      <button className="coverButton" type="button" onClick={onSelect}>
+        {coverUrl ? <img src={coverUrl} alt="" /> : <ListMusic size={34} />}
+      </button>
+      <button className="songText" type="button" onClick={onSelect}>
+        <strong>{album.name}</strong>
+        <span>{album.artist || `${album.songCount} Songs`}</span>
+      </button>
+    </article>
+  )
+}
+
+function ArtistRow({ artist, onSelect }) {
+  return (
+    <article className="songRow artistRow">
+      <button className="coverButton" type="button" onClick={onSelect}>
+        <ListMusic size={34} />
+      </button>
+      <button className="songText" type="button" onClick={onSelect}>
+        <strong>{artist.name}</strong>
+        <span>Künstler - {artist.albumCount} Alben</span>
+      </button>
+    </article>
+  )
+}
+
 const VerlaufRow = React.forwardRef(function VerlaufRow(
   { song, index, active, dragging, dropPosition, onClick, onMove, onPointerDragStart, onMenu },
   ref,
@@ -1471,7 +1660,7 @@ function ActionMenu({
           <>
             <button type="button" onClick={onInsertAfter}>Einfügen</button>
             <button type="button" onClick={onShowAlbum}>Zeige Album</button>
-            <button type="button" onClick={onShowArtist}>Zeige Artist</button>
+            <button type="button" onClick={onShowArtist}>Zeige Künstler</button>
           </>
         )}
 
@@ -1485,7 +1674,7 @@ function ActionMenu({
         {menu.type === "verlaufSong" && (
           <>
             <button type="button" onClick={onShowAlbum}>Zeige Album</button>
-            <button type="button" onClick={onShowArtist}>Zeige Artist</button>
+            <button type="button" onClick={onShowArtist}>Zeige Künstler</button>
             <button type="button" onClick={onRemove}>
               <Trash2 size={24} />
               Entfernen

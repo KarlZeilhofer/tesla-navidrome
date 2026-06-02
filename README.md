@@ -32,7 +32,7 @@ https://navidrome.example.com/tesla/
   - insert after the current song
   - add to playlist
   - show album
-  - show artist
+  - show Künstler
 - Result list bulk actions:
   - play all
   - insert all
@@ -43,9 +43,9 @@ https://navidrome.example.com/tesla/
   - shows a top `Zurueck` button instead of the search field
   - can reorder songs by drag and drop
   - can remove songs from the playlist
-- Album and artist views:
+- Album and Künstler views:
   - accessible from song menus
-  - show `Album ...` or `Artist ...` as the result title
+  - show `Album ...` or `Künstler ...` as the result title
   - use the same top `Zurueck` navigation
 - Verlauf:
   - local playback queue/history
@@ -172,4 +172,4 @@ Navidrome login and OpenSubsonic auth values are stored using Navidrome's normal
 
 ## Current Status
 
-This is an early, working Tesla-focused client. The main playback, search, playlist, liked songs, album/artist, and Verlauf workflows are implemented. Remaining tracked work is in `ISSUES.md`.
+This is an early, working Tesla-focused client. The main playback, search, playlist, liked songs, album/Künstler, and Verlauf workflows are implemented. Remaining tracked work is in `ISSUES.md`.
