@@ -1762,17 +1762,12 @@ function ActionMenu({
     }, 0)
   }
 
-  function handleBackdropClick(event) {
-    if (event.target !== event.currentTarget) return
-    onClose()
-  }
-
   function stopDialogEvent(event) {
     event.stopPropagation()
   }
 
   return (
-    <div className="modalBackdrop" onClick={handleBackdropClick}>
+    <div className="modalBackdrop">
       <section
         className={actionSheetClassName}
         ref={actionSheetRef}
