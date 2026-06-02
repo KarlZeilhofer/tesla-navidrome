@@ -13,14 +13,16 @@ https://navidrome.example.com/tesla/
 - Large, predictable touch controls for a Tesla browser viewport.
 - Search input at the top, so it stays usable when the keyboard opens.
 - HTML audio playback through Navidrome/OpenSubsonic stream URLs.
-- Reuse an existing Navidrome login from the same origin when possible.
+- Keep Tesla-specific login state independent from Navidrome's standard `/app` UI.
 - Provide a focused driving UI without the full Navidrome desktop interface.
 - Keep the project small enough to customize and publish as open source.
 
 ## Features
 
 - Login through Navidrome's `/auth/login` endpoint.
-- Reuses Navidrome auth data from local storage when the user is already logged in on the same origin.
+- Stores Tesla-specific sessions locally, separate from Navidrome's normal web client.
+- Supports multiple locally saved Navidrome users and quick switching between them.
+- Logout removes only the currently active local user profile.
 - Top playback bar with previous, play/pause, next, progress, current song, time, and like button.
 - Search for songs and playlists.
 - Special playlist search: typing `p`, `pl`, `play`, `playlist`, etc. lists all playlists while still showing other matching results.
@@ -83,7 +85,7 @@ The app talks to Navidrome through same-origin endpoints:
 - `/rest/updatePlaylist.view`
 - `/rest/createPlaylist.view`
 
-The OpenSubsonic auth values are read from Navidrome's local storage keys after login.
+The app receives OpenSubsonic auth values through `/auth/login` and stores them under Tesla-specific local storage keys. It does not depend on or modify Navidrome `/app` login state.
 
 ## Local Development
 
@@ -167,8 +169,10 @@ The app stores local UI/playback state in local storage:
 - `teslaNavidromeState`: Verlauf, current index, playback position, and play state.
 - `teslaNavidromeTheme`: selected theme mode.
 - `teslaNavidromeSkipStats`: local skip statistics for removing unpopular songs from Verlauf.
+- `teslaNavidromeCurrentAuth`: currently active Tesla user session.
+- `teslaNavidromeUserProfiles`: locally saved Tesla user sessions for quick switching.
 
-Navidrome login and OpenSubsonic auth values are stored using Navidrome's normal local storage keys.
+Login state is intentionally local to this app. Logging in or out of `/tesla/` should not log the same browser in or out of Navidrome's standard `/app` interface.
 
 ## Current Status
 
