@@ -7,6 +7,10 @@
     Für kurze Wiedergabepause ist es aktuell unbrauchbar, wäre aber sehr wichtig.
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
+76. Beim Klick in eine Dialog-Eingabezeile wird der Dialog unerwartet geschlossen. 
+    Betrifft alle diese Dialoge. Das ist unerwartetes, unbrauchbares Verhalten. 
+
+
 # Issues Erledigt
 
 1. Auto continue, wenn app wieder gestartet wird (erneutes einsteigen in das fahzeug)
