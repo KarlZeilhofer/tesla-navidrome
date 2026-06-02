@@ -7,6 +7,18 @@
     Für kurze Wiedergabepause ist es aktuell unbrauchbar, wäre aber sehr wichtig.
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
+70. Nach einem neuen login muss natürlich auch diese Zufallsliste geladen werden. 
+    Siehe Issue 68. 
+71. Wenn auf [Lupe] geklickt wird, muss der Fokus in die Eingabezeile springen. 
+72. Wir brauchen nun noch das Feature, zwischen mehreren angemeldeten Usern wechseln zu können.
+    Wenn ich auf [user] klicke, soll der bisherige dialog angezeigt werden, aber zusätzlich
+    müssen alle angemeldeten User gelistet sein, und einen zusätzlicher Button 
+    [Anmelden] braucht es auch, der zum Loginscreen führt. 
+    Damit soll dann ein weiterer User angemeldet werden können. 
+    Die Verlaufsliste muss lokal für jeden User separat im Browser gespeichert bleiben. 
+
+
+
 # Issues Erledigt
 
 1. Auto continue, wenn app wieder gestartet wird (erneutes einsteigen in das fahzeug)
