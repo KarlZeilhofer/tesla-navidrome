@@ -538,7 +538,7 @@ h3 {
 
 .actionSheet {
   width: min(760px, 100%);
-  max-height: min(550px, calc(100vh - 28px));
+  max-height: min(900px, calc(100vh - 28px));
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid var(--border-strong);
@@ -546,6 +546,10 @@ h3 {
   background: var(--panel);
   padding: 18px;
   box-shadow: 0 24px 60px rgb(0 0 0 / 0.35);
+}
+
+.actionSheet.inputFocused {
+  max-height: min(550px, calc(100vh - 28px));
 }
 
 .actionSheet header {

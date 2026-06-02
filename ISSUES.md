@@ -7,10 +7,6 @@
     Für kurze Wiedergabepause ist es aktuell unbrauchbar, wäre aber sehr wichtig.
 24. Im Tesla prüfen: Browser-Hinweis, dass nur Audio und kein Video abgespielt wird.
     Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug verifiziert werden.
-65. Dialogboxen dürfen anfangs immer bis zu 900px hoch sein. 
-    Bekommt aber die Texteingabe den Fokus, dann muss die Dialogbox auf 550px schrumpfen, 
-    und so scrollen, dass das Eingabefeld sichtbar ist innerhalb der geschrumpften Box. 
-
 
 
 # Issues Erledigt
@@ -143,3 +139,6 @@
 64. Die Eingabezeile, bzw. der Button [Plus] beim erstellen einer neuen Playlist
     wird von der Tesla Tastatur verdeckt. Die Dialogbox soll ganz oben sitzen am
     Bildschirm, und zusätzlich scrollbar sein, und darf max. 550px groß sein.
+65. Dialogboxen dürfen anfangs immer bis zu 900px hoch sein.
+    Bekommt aber die Texteingabe den Fokus, dann muss die Dialogbox auf 550px schrumpfen,
+    und so scrollen, dass das Eingabefeld sichtbar ist innerhalb der geschrumpften Box.

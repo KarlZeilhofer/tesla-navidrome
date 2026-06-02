@@ -1399,11 +1399,40 @@ function ActionMenu({
   theme,
   onThemeChange,
 }) {
+  const actionSheetRef = useRef(null)
+  const [hasFocusedTextInput, setHasFocusedTextInput] = useState(false)
   const isSongMenu = menu.type === "song" || menu.type === "playlistSong" || menu.type === "verlaufSong"
   const menuTitle = isSongMenu ? menu.song.title : menu.type === "results" ? resultTitle : menu.type === "user" ? "Benutzer" : "Verlauf"
+  const actionSheetClassName = hasFocusedTextInput ? "actionSheet inputFocused" : "actionSheet"
+
+  function handleFocusCapture(event) {
+    const tag = event.target?.tagName?.toLowerCase()
+    if (tag !== "input" && tag !== "textarea") return
+    setHasFocusedTextInput(true)
+    window.setTimeout(() => {
+      event.target?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+    }, 0)
+  }
+
+  function handleBlurCapture() {
+    window.setTimeout(() => {
+      const activeElement = document.activeElement
+      const tag = activeElement?.tagName?.toLowerCase()
+      const inputStillFocused =
+        actionSheetRef.current?.contains(activeElement) && (tag === "input" || tag === "textarea")
+      setHasFocusedTextInput(Boolean(inputStillFocused))
+    }, 0)
+  }
+
   return (
     <div className="modalBackdrop" onClick={onClose}>
-      <section className="actionSheet" onClick={(event) => event.stopPropagation()}>
+      <section
+        className={actionSheetClassName}
+        ref={actionSheetRef}
+        onClick={(event) => event.stopPropagation()}
+        onFocusCapture={handleFocusCapture}
+        onBlurCapture={handleBlurCapture}
+      >
         <header>
           <h2>{menuTitle}</h2>
           <button type="button" onClick={onClose}>Schließen</button>
