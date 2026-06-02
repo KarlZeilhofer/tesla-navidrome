@@ -31,16 +31,20 @@ const CURRENT_AUTH_KEY = "teslaNavidromeCurrentAuth"
 const MIN_FUTURE = 8
 const MAX_HISTORY = 200
 
+function emptyAuthState() {
+  return {
+    jwt: "",
+    username: "",
+    salt: "",
+    subsonicToken: "",
+    name: "",
+    isAuthenticated: false,
+  }
+}
+
 function normalizeAuthProfile(profile) {
   if (!profile?.username) {
-    return {
-      jwt: "",
-      username: "",
-      salt: "",
-      subsonicToken: "",
-      name: "",
-      isAuthenticated: false,
-    }
+    return emptyAuthState()
   }
   const username = profile.username || ""
   const name = profile.name || username
@@ -1247,7 +1251,7 @@ function App() {
   function loginAnotherUser() {
     audioRef.current?.pause()
     clearAuth()
-    setAuth(authState())
+    setAuth(emptyAuthState())
     setMenu(null)
   }
 
