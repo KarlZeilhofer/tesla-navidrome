@@ -30,6 +30,17 @@ const USER_PROFILES_KEY = "teslaNavidromeUserProfiles"
 const CURRENT_AUTH_KEY = "teslaNavidromeCurrentAuth"
 const MIN_FUTURE = 8
 const MAX_HISTORY = 200
+const DESIGN_WIDTH = 1170
+
+function viewportLayout() {
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  const scale = Math.min(1, viewportWidth / DESIGN_WIDTH)
+  return {
+    scale,
+    height: viewportHeight / scale,
+  }
+}
 
 function emptyAuthState() {
   return {
@@ -282,6 +293,7 @@ function saveSkipStats(stats) {
 function App() {
   const initialAuth = useMemo(authState, [])
   const savedState = useMemo(() => loadSavedState(initialAuth.username), [initialAuth.username])
+  const [layout, setLayout] = useState(viewportLayout)
   const [auth, setAuth] = useState(initialAuth)
   const [query, setQuery] = useState("")
   const [songs, setSongs] = useState([])
@@ -317,6 +329,22 @@ function App() {
   const futureCount = Math.max(0, verlauf.length - currentIndex - 1)
   const canUseApi = auth.username && auth.subsonicToken && auth.salt
   const isEditablePlaylist = playlistView?.type === "playlist"
+
+  useEffect(() => {
+    const updateLayout = () => setLayout(viewportLayout())
+    window.addEventListener("resize", updateLayout)
+    window.visualViewport?.addEventListener("resize", updateLayout)
+    return () => {
+      window.removeEventListener("resize", updateLayout)
+      window.visualViewport?.removeEventListener("resize", updateLayout)
+    }
+  }, [])
+
+  const scaledViewportStyle = {
+    width: `${DESIGN_WIDTH}px`,
+    height: `${layout.height}px`,
+    transform: `scale(${layout.scale})`,
+  }
 
   const streamUrl = useMemo(() => {
     if (!currentSong || !canUseApi) return ""
@@ -1255,7 +1283,7 @@ function App() {
 
   if (!auth.isAuthenticated || !canUseApi) {
     return (
-      <main className="loginScreen">
+      <main className="loginScreen scaledViewport" style={scaledViewportStyle}>
         <section className="loginPanel">
           <p className="eyebrow">Tesla Navidrome</p>
           <h1>Login</h1>
@@ -1281,14 +1309,14 @@ function App() {
   }
 
   return (
-    <main className="app">
+    <main className="app scaledViewport" style={scaledViewportStyle}>
       <audio ref={audioRef} preload="auto" />
       {dragState?.song && (
         <div
           className="dragGhost"
           style={{
-            left: `${Math.max(8, Math.min(dragState.x + 18, window.innerWidth - 390))}px`,
-            top: `${Math.max(8, Math.min(dragState.y + 18, window.innerHeight - 90))}px`,
+            left: `${Math.max(8, Math.min((dragState.x + 18) / layout.scale, DESIGN_WIDTH - 390))}px`,
+            top: `${Math.max(8, Math.min((dragState.y + 18) / layout.scale, layout.height - 90))}px`,
           }}
         >
           <strong>{dragState.song.title}</strong>

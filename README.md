@@ -138,7 +138,7 @@ The production web server must route `/tesla/` to the built static files and pro
 
 ## Tesla Browser Notes
 
-The UI is tuned for a browser area around `1170x920` px and uses a fixed 1170 px layout viewport so Tesla browser updates cannot distort the proportions. It remains usable when the keyboard reduces the visible height to about `1170x550` px.
+The UI is tuned for a browser area around `1170x920` px. On narrower screens, the complete 1170 px design is scaled proportionally to the current viewport width so its original proportions remain intact. It remains usable when the keyboard reduces the visible height to about `1170x550` px.
 
 Touch targets are intentionally large. Most important controls are at least about `100x60` px. The search area is kept at the top because the Tesla keyboard opens from the bottom.
 
