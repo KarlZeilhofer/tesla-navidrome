@@ -23,7 +23,7 @@ https://navidrome.example.com/tesla/
 - Stores Tesla-specific sessions locally, separate from Navidrome's normal web client.
 - Supports multiple locally saved Navidrome users and quick switching between them.
 - Logout removes only the currently active local user profile.
-- Top playback bar with previous, play/pause, next, progress, current song, time, and like button.
+- Bottom playback bar with previous, play/pause, next, progress, current song, time, and like button.
 - Search for songs and playlists.
 - Special playlist search: typing `p`, `pl`, `play`, `playlist`, etc. lists all playlists while still showing other matching results.
 - `Liked` button loads all starred songs.
