@@ -1336,8 +1336,15 @@ function App() {
           </button>
         </div>
         <div className="nowPlaying">
-          <strong>{currentSong?.title || "Bereit"}</strong>
-          <span>{currentSong ? `${currentSong.artist} - ${currentSong.album}` : `Angemeldet als ${auth.name}`}</span>
+          <div className="nowPlayingHeader">
+            <div className="songDetails">
+              <strong>{currentSong?.title || "Bereit"}</strong>
+              <span>{currentSong ? `${currentSong.artist} - ${currentSong.album}` : `Angemeldet als ${auth.name}`}</span>
+            </div>
+            <div className="clock">
+              {formatTime(time.current)} / {formatTime(time.duration || currentSong?.duration || 0)}
+            </div>
+          </div>
           <input
             className="progress"
             type="range"
@@ -1353,9 +1360,6 @@ function App() {
           <Heart size={28} fill={currentSong?.starred ? "currentColor" : "none"} />
           Like
         </button>
-        <div className="clock">
-          {formatTime(time.current)} / {formatTime(time.duration || currentSong?.duration || 0)}
-        </div>
       </header>
 
       <section className="searchBar">

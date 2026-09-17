@@ -122,6 +122,7 @@ input {
 
 .app {
   min-height: 550px;
+  padding-top: 30px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -133,7 +134,7 @@ input {
   flex: none;
   height: 92px;
   display: grid;
-  grid-template-columns: 316px minmax(0, 1fr) 112px 150px;
+  grid-template-columns: 316px minmax(0, 1fr) 112px;
   gap: 16px;
   align-items: center;
   padding: 10px 14px;
@@ -170,6 +171,18 @@ input {
 }
 
 .nowPlaying {
+  min-width: 0;
+}
+
+.nowPlayingHeader {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: end;
+}
+
+.songDetails {
   min-width: 0;
 }
 
@@ -684,7 +697,7 @@ h3 {
 @media (max-height: 620px) {
   .playerBar {
     height: 82px;
-    grid-template-columns: 292px minmax(0, 1fr) 100px 120px;
+    grid-template-columns: 292px minmax(0, 1fr) 100px;
     padding: 8px 12px;
   }
 
@@ -710,6 +723,10 @@ h3 {
 
   .songRow {
     min-height: 76px;
+  }
+
+  .progress {
+    margin-top: 2px;
   }
 
   .loginScreen {
