@@ -29,8 +29,10 @@ https://navidrome.example.com/tesla/
 - `Liked` button loads all starred songs.
 - `Zufall` button loads 30 random songs into the result list.
 - Repeat button cycles through playlist, song, radio, LikedRadio, and no-repeat modes.
-- Radio mode continues with random songs when the playback queue reaches its end.
-- LikedRadio mode continues with randomly selected liked songs.
+- Smart Radio continues with acoustically similar songs, using the last five listened tracks and a persistent, deliberately chosen anchor against mood drift.
+- LikedRadio uses the same recommendation policy, restricted to the active user's liked songs. User ratings, library permissions, recently queued songs, duplicate titles and artist variety are respected.
+- Music and spoken programmes are kept separate. Speech-dominated artists are also kept out of music stations after at least four speech detections and a 65% speech share; per-song manual overrides take precedence.
+- Automatic additions are buffered three songs ahead; local search and explicitly queued songs remain under user control. If no suitable analyzed candidate exists, Radio reports that instead of reverting to unfiltered random playback.
 - Song action dialogs can set or clear the current user's 1–5 star rating.
 - User settings can hide unrated and lower-rated songs with a per-user minimum rating of 2+, 3+, 4+, or 5 stars.
 - On phone-sized viewports, search results and the playback queue use the full content width and can be switched with a horizontal swipe.
@@ -156,6 +158,16 @@ The production web server must route `/tesla/` to the built static files and pro
 Device control and desktop music uploads use the Node.js service in `server/control-server.mjs`. The deployment script installs it as the hardened `tesla-navidrome-control.service`; nginx proxies `/tesla-control/` to its local port. Persistent pairings contain only hashed random device secrets and are stored in `/var/lib/tesla-navidrome-control`.
 
 Uploads are restricted server-side to the usernames configured in `UPLOAD_ALLOWED_USERS` (currently `karl`). Files are streamed to a private staging directory, inspected with `music-metadata`, and shown for confirmation before import. Confirmed metadata is written with `ffmpeg -c copy`, so the audio stream is not re-encoded. Imported files are organized below `/srv/music/Uploads/<Albumartist>/<Album>/` and picked up by Navidrome's file watcher.
+
+## Smart Radio analysis
+
+`tesla-navidrome-radio.service` runs locally on port 4782 as the Navidrome service user, with read-only access to Navidrome's database and audio files. Only the authenticated Node gateway can expose its results through `/tesla-control/radio/`. Candidate tracks and ratings are obtained from the active user's OpenSubsonic API, not from browser-provided permissions or ratings.
+
+The worker analyzes three 20-second excerpts per track. Discogs-EffNet produces normalized 1280-dimensional audio embeddings; YAMNet estimates music, speech and singing. The fixed 64-patch model input is padded and only real audio patches contribute to the vector. Analysis results and manual content-type overrides persist in `/var/lib/tesla-navidrome-radio/analysis.sqlite`. Files are checked every 30 seconds between scans, and identical source-file hashes reuse cached analysis. Failures are retried after a day; newly requested, unanalyzed context tracks are prioritized during a scan.
+
+Recommendation uses 65% recent-context similarity and 35% anchor similarity, then applies personal preferences, repeat exclusions and artist diversity. It samples from a short list of good matches rather than always selecting the nearest neighbour. A minimum match threshold is applied, and unclassified tracks do not enter automatic stations.
+
+`scripts/setup-radio.sh` creates an isolated Python environment and downloads SHA-256-verified model weights. Model attribution and non-commercial license terms are documented in [server/RADIO_MODELS.md](server/RADIO_MODELS.md). Music never leaves the server. The user dialog shows analysis progress; administrators can correct “Music / Speech” in song menus.
 
 ## Tesla Browser Notes
 

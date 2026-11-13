@@ -1,0 +1,29 @@
+[Unit]
+Description=Tesla Navidrome audio analysis and smart radio
+After=network.target navidrome.service
+
+[Service]
+User=navidrome
+Group=navidrome
+WorkingDirectory=/opt/tesla-navidrome-radio
+Environment=PYTHONUNBUFFERED=1
+Environment=TF_CPP_MIN_LOG_LEVEL=2
+Environment=TF_NUM_INTRAOP_THREADS=2
+Environment=TF_NUM_INTEROP_THREADS=1
+Environment=OMP_NUM_THREADS=2
+Environment=OPENBLAS_NUM_THREADS=1
+ExecStart=/opt/tesla-navidrome-radio-venv/bin/python /opt/tesla-navidrome-radio/radio_server.py
+Restart=on-failure
+RestartSec=15
+Nice=15
+CPUQuota=200%
+MemoryMax=2200M
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/tesla-navidrome-radio
+
+[Install]
+WantedBy=multi-user.target

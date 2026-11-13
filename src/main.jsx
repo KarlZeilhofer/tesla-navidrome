@@ -52,6 +52,7 @@ const PLAYER_MUTED_KEY = "teslaNavidromePlayerMuted"
 const CONTROL_PAIRINGS_KEY = "teslaNavidromeControlPairings"
 const CONTROLLER_DEVICE_KEY = "teslaNavidromeControllerDevice"
 const MIN_FUTURE = 8
+const RADIO_LOOKAHEAD = 3
 const MAX_HISTORY = 200
 const DESIGN_WIDTH = 1170
 const MOBILE_SCALE_MULTIPLIER = 2
@@ -334,6 +335,7 @@ function normalizeSong(song) {
     coverArt: song.coverArt,
     starred: Boolean(song.starred),
     userRating: Math.max(0, Math.min(5, Number(song.userRating || 0))),
+    radioGenerated: Boolean(song.radioGenerated),
   }
 }
 
@@ -396,13 +398,14 @@ function loadSavedState(username = authState().username) {
       currentIndex: Math.max(-1, Number(saved.currentIndex ?? -1)),
       position: Number(saved.position || 0),
       wasPlaying: Boolean(saved.wasPlaying),
+      radioAnchor: saved.radioAnchor || null,
     }
   } catch {
     return null
   }
 }
 
-function saveState({ verlauf, currentIndex, position, wasPlaying, username }) {
+function saveState({ verlauf, currentIndex, position, wasPlaying, username, radioAnchor }) {
   localStorage.setItem(
     stateStorageKey(username),
     JSON.stringify({
@@ -410,6 +413,7 @@ function saveState({ verlauf, currentIndex, position, wasPlaying, username }) {
       currentIndex,
       position,
       wasPlaying,
+      radioAnchor,
       savedAt: Date.now(),
     }),
   )
@@ -459,6 +463,7 @@ function App() {
   const [theme, setTheme] = useState(localStorage.getItem(THEME_KEY) || "auto")
   const [localRepeatMode, setRepeatMode] = useState(loadRepeatMode)
   const [minimumRating, setMinimumRating] = useState(() => loadMinimumRating(initialAuth.username))
+  const [radioInfo, setRadioInfo] = useState(null)
   const [showPassword, setShowPassword] = useState(false)
   const [menu, setMenu] = useState(null)
   const [playlists, setPlaylists] = useState([])
@@ -505,6 +510,9 @@ function App() {
   const didRestorePositionRef = useRef(false)
   const didLoadInitialResultsRef = useRef(false)
   const randomRefillRunning = useRef(false)
+  const radioSkippedRef = useRef(new Set())
+  const radioAnchorRef = useRef(savedState?.radioAnchor || null)
+  const radioScopeRef = useRef(null)
   const skipStatsRef = useRef(loadSkipStats())
   const playStartRef = useRef({ songId: "", startedAt: 0, duration: 0 })
   const playerControlRef = useRef(null)
@@ -520,6 +528,7 @@ function App() {
   const isPlaying = remotePairing ? Boolean(remotePlaybackState?.isPlaying) : localIsPlaying
   const time = remotePairing ? { current: remotePlaybackState?.current || 0, duration: remotePlaybackState?.duration || 0 } : localTime
   const repeatMode = remotePairing ? remotePlaybackState?.repeatMode || "no-repeat" : localRepeatMode
+  radioScopeRef.current = { username: auth.username, queue: localVerlauf, mode: localRepeatMode, minimumRating }
 
   const currentSong = currentIndex >= 0 ? verlauf[currentIndex] : null
   const futureCount = Math.max(0, verlauf.length - currentIndex - 1)
@@ -535,6 +544,30 @@ function App() {
   )
   const visibleSongs = useMemo(() => visibleSongEntries.map(({ song }) => song), [visibleSongEntries])
   const lastVisibleSongIndex = visibleSongEntries.at(-1)?.index ?? -1
+
+  async function radioRequest(action, body = {}) {
+    const response = await fetch(`/tesla-control/radio/${action}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Navidrome-Username": auth.username, "X-Navidrome-Token": auth.subsonicToken, "X-Navidrome-Salt": auth.salt },
+      body: JSON.stringify(body),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || "Smart Radio ist nicht erreichbar")
+    return data
+  }
+
+  useEffect(() => {
+    if (!menu || !auth.isAuthenticated) return undefined
+    let cancelled = false
+    setRadioInfo(null)
+    radioRequest("info", { id: menu.song?.id }).then((data) => { if (!cancelled) setRadioInfo(data) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [menu?.song?.id, menu?.type, auth.username])
+
+  async function setRadioKind(kind) {
+    try { setRadioInfo(await radioRequest("override", { id: menu.song.id, kind })); setStatus("Inhaltstyp für Smart Radio gespeichert.") }
+    catch (err) { setStatus(err.message) }
+  }
 
   useEffect(() => {
     localStorage.setItem(UI_SCALE_KEY, uiScale)
@@ -728,22 +761,25 @@ function App() {
       if (!canUseApi || randomRefillRunning.current) return []
       randomRefillRunning.current = true
       try {
-        const randomRequestSize = minimumRating > 0 ? Math.min(500, Math.max(count * 10, 50)) : count
-        const data =
-          mode === "liked-radio"
-            ? await subsonic("getStarred2", {}, auth)
-            : await subsonic("getRandomSongs", { size: randomRequestSize }, auth)
-        const candidates = (mode === "liked-radio" ? data.starred2?.song || [] : data.randomSongs?.song || [])
-          .map(normalizeSong)
-          .filter((song) => songMatchesMinimumRating(song, minimumRating))
-        const radioSongs = pickRandomSongs(candidates, count)
+        const heard = verlauf.slice(0, currentIndex + 1)
+        const listened = heard.filter((song) => !radioSkippedRef.current.has(song.id)).slice(-5)
+        const recent = listened.length ? listened : heard.slice(-1)
+        const anchor = [...heard].reverse().find((song) => !song.radioGenerated && !radioSkippedRef.current.has(song.id)) || radioAnchorRef.current || recent[0]
+        if (anchor) radioAnchorRef.current = { id: anchor.id }
+        const data = await radioRequest("recommend", {
+          mode, count: Math.min(3, count), minimumRating,
+          recentIds: recent.map((song) => song.id), anchorId: anchor?.id,
+          excludeIds: verlauf.slice(Math.max(0, currentIndex - 30)).map((song) => song.id),
+          skipIds: [...radioSkippedRef.current].slice(-100),
+        })
+        const scope = radioScopeRef.current
+        if (scope.username !== auth.username || scope.queue !== verlauf || scope.mode !== mode || scope.minimumRating !== minimumRating) return []
+        const radioSongs = (data.songs || []).map((song) => ({ ...normalizeSong(song), radioGenerated: true }))
         if (radioSongs.length) {
           setVerlauf((items) => [...items, ...radioSongs])
-          if (mode === "liked-radio") setStatus("")
-        } else if (minimumRating > 0) {
-          setStatus(`Keine Songs mit mindestens ${minimumRating} Sternen gefunden.`)
-        } else if (mode === "liked-radio") {
-          setStatus("Keine gelikten Songs gefunden.")
+          setStatus("Smart Radio: passende Songs ergänzt.")
+        } else {
+          setStatus(data.reason === "no_context" ? "Smart Radio: Ausgangstitel wird noch analysiert." : data.reason === "unknown_content" ? "Smart Radio: Inhaltstyp unklar. Bitte im Songmenü Musik oder Sprache festlegen." : "Smart Radio: keine weiteren passenden Songs gefunden.")
         }
         return radioSongs
       } catch (err) {
@@ -753,7 +789,7 @@ function App() {
         randomRefillRunning.current = false
       }
     },
-    [auth, canUseApi, minimumRating],
+    [auth, canUseApi, minimumRating, verlauf, currentIndex],
   )
 
   function recordSkip(songId, playedSeconds, durationSeconds) {
@@ -776,6 +812,7 @@ function App() {
     const audio = audioRef.current
     const songId = currentSong?.id || playStartRef.current.songId
     if (!songId || !audio) return
+    if (audio.currentTime > 0.5 && audio.currentTime < (audio.duration || currentSong?.duration || Infinity) * 0.8) radioSkippedRef.current.add(songId)
     recordSkip(songId, audio.currentTime || 0, audio.duration || currentSong?.duration || playStartRef.current.duration)
     playStartRef.current = { songId: "", startedAt: 0, duration: 0 }
   }
@@ -796,8 +833,8 @@ function App() {
     const futureCountBeforeSkip = verlauf.length - currentIndex - 1
     if (futureCountBeforeSkip > 0) {
       setCurrentIndex((idx) => idx + 1)
-      if (RADIO_MODES.has(repeatMode) && futureCountBeforeSkip <= MIN_FUTURE) {
-        addRadioFuture(repeatMode, MIN_FUTURE - futureCountBeforeSkip + 1)
+      if (RADIO_MODES.has(repeatMode) && futureCountBeforeSkip <= RADIO_LOOKAHEAD) {
+        addRadioFuture(repeatMode, RADIO_LOOKAHEAD - futureCountBeforeSkip + 1)
       }
       return
     }
@@ -883,6 +920,8 @@ function App() {
     if (!auth.isAuthenticated || !auth.username) return
     setMinimumRating(loadMinimumRating(auth.username))
     const nextSavedState = loadSavedState(auth.username)
+    radioAnchorRef.current = nextSavedState?.radioAnchor || null
+    radioSkippedRef.current = new Set()
     setVerlauf(nextSavedState?.verlauf || [])
     setCurrentIndex(nextSavedState?.currentIndex ?? -1)
     setTime({ current: nextSavedState?.position || 0, duration: 0 })
@@ -965,6 +1004,7 @@ function App() {
       position: audioRef.current?.currentTime || time.current || 0,
       wasPlaying: isPlaying,
       username: auth.username,
+      radioAnchor: radioAnchorRef.current,
     })
   }, [auth.username, currentIndex, isPlaying, time.current, verlauf, remotePairing])
 
@@ -999,7 +1039,7 @@ function App() {
         pendingSeekRef.current = 0
       }
     }
-    const onEnded = () => continueAfterSongEnd()
+    const onEnded = () => { if (currentSong?.id) radioSkippedRef.current.delete(currentSong.id); continueAfterSongEnd() }
     const onPlay = () => {
       playStartRef.current = {
         songId: currentSong?.id || "",
@@ -1129,7 +1169,7 @@ function App() {
     markCurrentSongSkip()
     setVerlauf((items) => {
       const index = currentIndex >= 0 ? currentIndex : -1
-      return [...items.slice(0, index + 1), song, ...items.slice(index + 1)]
+      return [...items.slice(0, index + 1), { ...song, radioGenerated: false }, ...items.slice(index + 1)]
     })
     setCurrentIndex((idx) => idx + 1)
   }
@@ -1994,6 +2034,7 @@ function App() {
     if (command === "play_index") {
       const index = Number(payload.index)
       if (Number.isInteger(index) && index >= 0 && index < verlauf.length) {
+        setVerlauf((items) => items.map((song, itemIndex) => itemIndex === index ? { ...song, radioGenerated: false } : song))
         if (index !== currentIndex) markCurrentSongSkip()
         setCurrentIndex(index)
       }
@@ -2302,6 +2343,7 @@ function App() {
                 }
                 onClick={() => {
                   if (remotePairing) return sendRemoteCommand("play_index", { index })
+                  setVerlauf((items) => items.map((song, itemIndex) => itemIndex === index ? { ...song, radioGenerated: false } : song))
                   if (index !== currentIndex) markCurrentSongSkip()
                   setCurrentIndex(index)
                 }}
@@ -2333,6 +2375,8 @@ function App() {
           onShowAlbum={() => showAlbum(menu.song)}
           onShowArtist={() => showArtist(menu.song)}
           onRate={(rating) => setSongRating(menu.song, rating)}
+          radioInfo={radioInfo}
+          onRadioKindChange={setRadioKind}
           onDownload={() => downloadSong(menu.song)}
           canManageLibrary={auth.role === "admin"}
           onMarkDuplicate={() => markDuplicate(menu.song)}
@@ -3087,6 +3131,8 @@ function ActionMenu({
   onShowAlbum,
   onShowArtist,
   onRate,
+  radioInfo,
+  onRadioKindChange,
   onDownload,
   onRemove,
   onRemoveFromPlaylist,
@@ -3176,6 +3222,7 @@ function ActionMenu({
 
         {menu.type === "user" && (
           <>
+            {radioInfo?.analysis && <p className="deviceStatus">Smart Radio: {radioInfo.analysis.analyzed} / {radioInfo.analysis.total} Songs analysiert{radioInfo.analysis.running ? " · Analyse läuft" : ""}</p>}
             <div className="playlistBox userProfiles">
               <h3>Benutzer</h3>
               <div className="playlistList">
@@ -3311,6 +3358,10 @@ function ActionMenu({
             </div>
           </div>
         )}
+        {isSongMenu && radioInfo && <div className="songRatingSetting">
+          <h3>Smart Radio · {radioInfo.song ? ({ music: "Musik", speech: "Sprache", unknown: "Noch unklar" }[radioInfo.song.kind]) : "Analyse ausstehend"}</h3>
+          {canManageLibrary && <div className="themeButtons">{[{ value: "auto", label: "Automatisch" }, { value: "music", label: "Musik" }, { value: "speech", label: "Sprache / Kabarett" }].map((option) => <button key={option.value} type="button" className={(radioInfo.song?.override || "auto") === option.value ? "selected" : ""} onClick={() => onRadioKindChange(option.value)}>{option.label}</button>)}</div>}
+        </div>}
 
         {isSongMenu && (
           <button type="button" onClick={onDownload}>

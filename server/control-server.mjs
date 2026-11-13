@@ -9,6 +9,7 @@ import { pipeline } from "node:stream/promises"
 import Busboy from "busboy"
 import { parseFile } from "music-metadata"
 import { WebSocketServer, WebSocket } from "ws"
+import { createRadioApi } from "./radio-api.mjs"
 
 const HOST = process.env.CONTROL_HOST || "127.0.0.1"
 const PORT = Number(process.env.CONTROL_PORT || 4781)
@@ -753,11 +754,27 @@ await fs.mkdir(MUSIC_UPLOAD_FOLDER, { recursive: true, mode: 0o755 })
 await loadUploadIndex()
 await cleanupExpiredUploads()
 
+const handleRadio = createRadioApi({
+  navidromeUrl: NAVIDROME_URL,
+  radioUrl: process.env.RADIO_URL || "http://127.0.0.1:4782",
+  validateAuth: validateNavidromeAuth,
+  allowedAdmins: UPLOAD_ALLOWED_USERS,
+})
+
 const server = http.createServer(async (request, response) => {
   try {
     const pathname = new URL(request.url, "http://localhost").pathname
     if (request.method === "GET" && pathname === "/health") {
       return jsonResponse(response, 200, { ok: true, playersOnline: playerConnections.size })
+    }
+    if (request.method === "POST" && pathname.startsWith("/radio/")) {
+      if (!uploadOriginAllowed(request)) return jsonResponse(response, 403, { error: "Nicht erlaubt" })
+      try {
+        const result = await handleRadio(pathname, uploadAuthFromRequest(request), await readJsonBody(request))
+        return jsonResponse(response, result.status, result.data)
+      } catch {
+        return jsonResponse(response, 503, { error: "Smart Radio ist gerade nicht verfügbar. Bitte später erneut versuchen." })
+      }
     }
     if (pathname.startsWith("/library/") && request.method === "POST") {
       const username = await authenticateUploader(request)

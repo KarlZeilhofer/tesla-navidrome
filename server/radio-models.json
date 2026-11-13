@@ -1,0 +1,14 @@
+{
+  "discogs-effnet.pb": {
+    "url": "https://essentia.upf.edu/models/feature-extractors/discogs-effnet/discogs-effnet-bs64-1.pb",
+    "sha256": "3ed9af50d5367c0b9c795b294b00e7599e4943244f4cbd376869f3bfc87721b1"
+  },
+  "yamnet.pb": {
+    "url": "https://essentia.upf.edu/models/audio-event-recognition/yamnet/audioset-yamnet-1.pb",
+    "sha256": "604dbd73c8552c4762b2e652ef69a45a46218c42c5fb3c292b16fd7940c2ca7f"
+  },
+  "yamnet.json": {
+    "url": "https://essentia.upf.edu/models/audio-event-recognition/yamnet/audioset-yamnet-1.json",
+    "sha256": "0c0499e4cedf01ba3012a1d0649e8fb9498106fb12fa74f0ea824d06f5e64f07"
+  }
+}
