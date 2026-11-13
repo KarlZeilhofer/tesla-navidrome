@@ -161,6 +161,8 @@ Uploads are restricted server-side to the usernames configured in `UPLOAD_ALLOWE
 
 Dropped folders are read recursively, including paginated browser directory entries. Uploads are divided into batches of up to 20 files / 256 MiB (single larger files travel alone), and imports into batches of 100. Non-audio sidecar files are ignored. Multipart filenames use UTF-8 so umlauts survive both upload and filename-based metadata detection.
 
+The upload dialog displays server filesystem capacity, used space, available space and any system reserve. Music and staging storage are shown once if they share a filesystem, separately otherwise. Values refresh every 15 seconds and after upload/import/removal operations; the storage endpoint requires upload authorization.
+
 ## Smart Radio analysis
 
 `tesla-navidrome-radio.service` runs locally on port 4782 as the Navidrome service user, with read-only access to Navidrome's database and audio files. Only the authenticated Node gateway can expose its results through `/tesla-control/radio/`. Candidate tracks and ratings are obtained from the active user's OpenSubsonic API, not from browser-provided permissions or ratings.

@@ -1,5 +1,5 @@
 const STATIC_CACHE_PREFIX = "tesla-navidrome-static-"
-const STATIC_CACHE_NAME = `${STATIC_CACHE_PREFIX}2026-11-14-1`
+const STATIC_CACHE_NAME = `${STATIC_CACHE_PREFIX}2026-11-14-2`
 const AUDIO_CACHE_NAME = "tesla-navidrome-audio-v1"
 const AUDIO_META_CACHE_NAME = "tesla-navidrome-audio-meta-v1"
 const AUDIO_META_KEY = "/tesla/__offline_audio_metadata__"

@@ -175,6 +175,18 @@ test("pairs a controller and relays state and commands", async (context) => {
     "X-Navidrome-Token": auth.token,
     "X-Navidrome-Salt": auth.salt,
   }
+  const anonymousStorage = await fetch(`http://127.0.0.1:${CONTROL_PORT}/upload/storage`, { method: "POST" })
+  assert.equal(anonymousStorage.status, 403)
+  const storageResponse = await fetch(`http://127.0.0.1:${CONTROL_PORT}/upload/storage`, { method: "POST", headers: uploadHeaders })
+  assert.equal(storageResponse.status, 200)
+  const storage = await storageResponse.json()
+  assert.equal(storage.volumes.length, 1) // Both temporary directories share a filesystem.
+  for (const volume of storage.volumes) {
+    assert.ok(volume.totalBytes > 0)
+    assert.ok(volume.usedBytes >= 0 && volume.availableBytes >= 0 && volume.reservedBytes >= 0)
+    assert.equal(volume.usedBytes + volume.availableBytes + volume.reservedBytes, volume.totalBytes)
+    assert.equal(volume.path, undefined)
+  }
   const analyzeResponse = await fetch(`http://127.0.0.1:${CONTROL_PORT}/upload/analyze`, {
     method: "POST",
     headers: uploadHeaders,

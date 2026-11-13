@@ -2537,6 +2537,29 @@ function UploadDialog({ auth, onClose }) {
   const [errors, setErrors] = useState([])
   const [importResults, setImportResults] = useState({})
   const [isDragging, setIsDragging] = useState(false)
+  const [storage, setStorage] = useState(null)
+  const [storageError, setStorageError] = useState("")
+
+  const refreshStorage = useCallback(async (signal) => {
+    try {
+      const response = await fetch("/tesla-control/upload/storage", {
+        method: "POST", signal,
+        headers: { "X-Navidrome-Username": auth.username, "X-Navidrome-Token": auth.subsonicToken, "X-Navidrome-Salt": auth.salt },
+      })
+      if (!response.ok) throw new Error("Speicherbelegung gerade nicht abrufbar.")
+      const data = await response.json()
+      if (!signal?.aborted) { setStorage(data); setStorageError("") }
+    } catch (error) {
+      if (!signal?.aborted) setStorageError("Speicherbelegung gerade nicht abrufbar.")
+    }
+  }, [auth.username, auth.subsonicToken, auth.salt])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    refreshStorage(controller.signal)
+    const timer = window.setInterval(() => refreshStorage(controller.signal), 15_000)
+    return () => { controller.abort(); window.clearInterval(timer) }
+  }, [refreshStorage])
 
   async function addFiles(fileList) {
     if (isUploading || isImporting) return
@@ -2566,12 +2589,14 @@ function UploadDialog({ auth, onClose }) {
         setErrors((current) => [...current, ...(result.errors || [])])
         analyzedCount += result.files?.length || 0
         completedBytes += batchBytes
+        refreshStorage()
       }
       setStatus(`${analyzedCount} ${analyzedCount === 1 ? "Datei analysiert" : "Dateien analysiert"}.`)
     } catch (uploadError) {
       setStatus(uploadError.message)
     } finally {
       setIsUploading(false)
+      refreshStorage()
     }
   }
 
@@ -2608,6 +2633,7 @@ function UploadDialog({ auth, onClose }) {
           return { ...item, duplicateInBatch }
         })
       })
+      refreshStorage()
     } catch (err) { setStatus(err.message) }
   }
 
@@ -2644,6 +2670,7 @@ function UploadDialog({ auth, onClose }) {
       setStatus(importError.message)
     } finally {
       setIsImporting(false)
+      refreshStorage()
     }
   }
 
@@ -2663,6 +2690,20 @@ function UploadDialog({ auth, onClose }) {
           <h2>Musik hochladen</h2>
           <button type="button" onClick={onClose} disabled={isUploading || isImporting}>Schließen</button>
         </header>
+
+        <div className="uploadStorage" aria-live="polite">
+          {storage?.volumes?.map((volume) => <div key={volume.label}>
+            <h3>{volume.label}</h3>
+            <div className="storageFigures">
+              <span>Belegt <strong>{formatFileSize(volume.usedBytes)}</strong></span>
+              <span>Verfügbar <strong>{formatFileSize(volume.availableBytes)}</strong></span>
+              <span>Gesamt <strong>{formatFileSize(volume.totalBytes)}</strong></span>
+            </div>
+            <progress max={Math.max(1, volume.totalBytes)} value={volume.usedBytes} aria-label={`${volume.label}: ${formatFileSize(volume.usedBytes)} belegt`} />
+            {volume.reservedBytes > 0 && <small>{formatFileSize(volume.reservedBytes)} zusätzlich als Systemreserve reserviert.</small>}
+          </div>)}
+          {storageError ? <p>{storageError}</p> : !storage && <p>Speicherbelegung wird geladen …</p>}
+        </div>
 
         <div
           className={`uploadDropZone ${isDragging ? "dragging" : ""}`}

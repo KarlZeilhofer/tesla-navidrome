@@ -132,6 +132,30 @@ async function authenticateUploader(request) {
   return username
 }
 
+async function uploadStorage() {
+  const locations = [
+    { path: MUSIC_UPLOAD_FOLDER, label: "Musikbibliothek" },
+    { path: UPLOAD_STAGING_FOLDER, label: "Upload-Zwischenspeicher" },
+  ]
+  const volumes = await Promise.all(locations.map(async (location) => {
+    const [stat, space] = await Promise.all([fs.stat(location.path), fs.statfs(location.path)])
+    return {
+      device: stat.dev,
+      label: location.label,
+      totalBytes: space.blocks * space.bsize,
+      usedBytes: Math.max(0, space.blocks - space.bfree) * space.bsize,
+      availableBytes: Math.max(0, space.bavail) * space.bsize,
+      reservedBytes: Math.max(0, space.bfree - space.bavail) * space.bsize,
+    }
+  }))
+  const shared = volumes[0].device === volumes[1].device
+  return {
+    checkedAt: new Date().toISOString(),
+    volumes: (shared ? [{ ...volumes[0], label: "Serverspeicher · Musik und Uploads" }] : volumes)
+      .map(({ device, ...volume }) => volume),
+  }
+}
+
 function filenameMetadata(filename) {
   const basename = path.basename(filename, path.extname(filename)).replace(/[_]+/g, " ").trim()
   const withoutTrack = basename.replace(/^\s*\d{1,3}[ ._-]+/, "").trim()
@@ -836,6 +860,10 @@ const server = http.createServer(async (request, response) => {
       if (!username) {
         request.resume()
         return jsonResponse(response, 403, { error: "Upload ist für diesen Benutzer nicht freigegeben." })
+      }
+      if (pathname === "/upload/storage") {
+        request.resume()
+        return jsonResponse(response, 200, await uploadStorage())
       }
       if (pathname === "/upload/analyze") return handleAnalyzeUpload(request, response, username)
       if (pathname === "/upload/import") return handleImportUpload(request, response, username)
