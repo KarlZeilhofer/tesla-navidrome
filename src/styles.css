@@ -116,13 +116,12 @@ input {
 }
 
 .scaledViewport {
-  margin: 0 auto;
+  position: fixed;
+  margin: 0;
   transform-origin: top left;
 }
 
 .app {
-  min-height: 550px;
-  padding-top: 30px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -228,7 +227,7 @@ input {
   flex: none;
   height: 84px;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 118px 122px 130px 24px 140px;
+  grid-template-columns: 40px minmax(0, 1fr) 106px 106px 106px 84px 72px 120px;
   gap: 12px;
   align-items: center;
   padding: 12px 14px;
@@ -238,7 +237,7 @@ input {
 .quickButtons {
   grid-column: 1 / 3;
   display: grid;
-  grid-template-columns: 78px repeat(3, minmax(112px, 1fr));
+  grid-template-columns: 78px repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -275,6 +274,36 @@ input {
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+.repeatModeButton {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+}
+
+.deviceButton {
+  min-width: 0;
+  padding: 0;
+}
+
+.deviceButton.connected {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.repeatModeIcon {
+  width: 42px;
+  height: 42px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.repeatModeBars {
+  stroke-width: 4.5;
 }
 
 .backToResults {
@@ -425,7 +454,7 @@ h3 {
 }
 
 .userButtonSlot {
-  grid-column: 7;
+  grid-column: 8;
 }
 
 .verlaufRow {
@@ -527,7 +556,6 @@ h3 {
 }
 
 .loginScreen {
-  min-height: 550px;
   display: block;
   padding: 28px 24px;
   background: var(--bg);
@@ -607,6 +635,524 @@ h3 {
   max-height: min(550px, calc(100vh - 28px));
 }
 
+.deviceSheet,
+.remoteSheet {
+  width: min(1080px, 100%);
+}
+
+.deviceSection {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.deviceSection:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.deviceSection > button {
+  width: 100%;
+}
+
+.deviceToggle {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--button);
+}
+
+.deviceToggle input {
+  width: 28px;
+  min-height: 28px;
+  height: 28px;
+  accent-color: var(--accent);
+}
+
+.deviceNameRow,
+.pairCodeEntry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 10px;
+}
+
+.deviceNameRow input,
+.pairCodeEntry input {
+  width: 100%;
+  padding: 0 14px;
+}
+
+.deviceStatus {
+  margin: 0;
+  color: var(--muted);
+}
+
+.deviceStatus.connected,
+.remoteHeader .online {
+  color: var(--accent);
+}
+
+.deviceStatus.error,
+.remoteHeader .offline {
+  color: var(--liked);
+}
+
+.pairingCode {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  padding: 18px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent), transparent 90%);
+}
+
+.pairingCode strong {
+  font-size: 42px;
+  letter-spacing: 0.16em;
+}
+
+.pairingCode span,
+.pairedDevice small,
+.remoteList small {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.pairedList {
+  display: grid;
+  gap: 8px;
+}
+
+.pairedDevice {
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
+  gap: 8px;
+  align-items: stretch;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--button);
+}
+
+.pairedDevice > span,
+.pairedDeviceMain > span {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  padding: 8px 12px;
+}
+
+.pairedDevice > button:not(.pairedDeviceMain) {
+  min-width: 64px;
+  border: 0;
+  border-left: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: transparent;
+}
+
+.pairedDeviceMain {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: center;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.pairedDeviceMain > svg {
+  justify-self: center;
+}
+
+.remoteSheet {
+  height: min(900px, calc(100vh - 28px));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.actionSheet .remoteHeader {
+  flex: none;
+  grid-template-columns: 72px minmax(0, 1fr) 130px;
+}
+
+.remoteHeader > button:first-child {
+  min-width: 64px;
+}
+
+.remoteHeader > div {
+  min-width: 0;
+}
+
+.remoteHeader span {
+  display: block;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.remoteNowPlaying {
+  flex: none;
+  display: grid;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.remoteNowPlaying > strong {
+  overflow: hidden;
+  font-size: 25px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remoteNowPlaying > span {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remoteTransport {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.remoteTransport button {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+}
+
+.remoteRangeRow,
+.remoteVolumeRow {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr) 60px;
+  gap: 10px;
+  align-items: center;
+}
+
+.remoteRangeRow input,
+.remoteVolumeRow input {
+  width: 100%;
+  min-height: 32px;
+  accent-color: var(--accent);
+}
+
+.remoteRangeRow span,
+.remoteVolumeRow span {
+  color: var(--muted);
+  font-size: 15px;
+  text-align: center;
+}
+
+.remoteVolumeRow button {
+  min-width: 52px;
+  min-height: 48px;
+}
+
+.remoteColumns {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  padding-top: 14px;
+}
+
+.remoteSearch,
+.remoteQueue {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.remoteSearch > input {
+  flex: none;
+  width: 100%;
+  margin: 8px 0;
+  padding: 0 14px;
+}
+
+.remoteList {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.remoteList article {
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 74px 56px;
+  gap: 6px;
+  align-items: stretch;
+  padding: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--button);
+}
+
+.remoteList article.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent), transparent 82%);
+}
+
+.remoteList article > span,
+.remoteSongButton {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.remoteList strong,
+.remoteList small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remoteList article > button {
+  min-width: 0;
+}
+
+.remoteQueue .remoteList article {
+  grid-template-columns: minmax(0, 1fr) 152px;
+}
+
+.remoteQueueActions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.remoteQueueActions button {
+  min-width: 0;
+  min-height: 52px;
+  padding: 0;
+}
+
+.uploadSheet {
+  width: min(1100px, 100%);
+}
+
+.deleteSwipe { position: relative; height: 70px; margin-top: 22px; border-radius: 10px; background: var(--panel-strong); border: 2px solid var(--liked); display: grid; place-items: center; }
+.deleteSwipe > span { padding: 0 72px; font-size: 16px; text-align: center; pointer-events: none; }
+.deleteSwipe > button { position: absolute; top: 1px; width: 64px; min-width: 64px; height: 64px; font-size: 36px; color: var(--bg); background: var(--liked); touch-action: none; user-select: none; }
+.remoteVolumeInline { display: grid; grid-template-columns: minmax(120px, 1fr) 48px minmax(180px, 2fr); align-items: center; gap: 10px; padding: 6px 14px; background: var(--panel-strong); order: 2; }
+.remoteVolumeInline > span { min-width: 0; }
+.remoteVolumeInline > button { min-width: 48px; min-height: 40px; padding: 0; }
+.remoteVolumeInline input { min-height: 36px; width: 100%; accent-color: var(--accent); }
+
+.deviceButton.remoteControlActive,
+.remoteVolumeInline.remoteControlActive {
+  color: var(--text);
+  background-color: color-mix(in srgb, var(--accent) 28%, var(--panel-strong));
+  animation: remoteControlBreathing 2.6s ease-in-out infinite;
+}
+
+.deviceButton.remoteControlActive {
+  border: 2px solid var(--accent);
+}
+
+.remoteVolumeInline.remoteControlActive {
+  border-bottom: 2px solid var(--accent);
+}
+
+@keyframes remoteControlBreathing {
+  0%, 100% {
+    background-color: color-mix(in srgb, var(--accent) 14%, var(--panel-strong));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+  50% {
+    background-color: color-mix(in srgb, var(--accent) 48%, var(--panel-strong));
+    box-shadow: inset 0 0 14px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+}
+
+.deviceButton.remoteControlUnavailable,
+.remoteVolumeInline.remoteControlUnavailable {
+  border-color: var(--liked);
+  color: var(--liked);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deviceButton.remoteControlActive,
+  .remoteVolumeInline.remoteControlActive {
+    animation: none;
+    background-color: color-mix(in srgb, var(--accent) 40%, var(--panel-strong));
+  }
+}
+
+.uploadDropZone {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 28px;
+  border: 3px dashed var(--border-strong);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent), transparent 96%);
+  text-align: center;
+}
+
+.uploadDropZone.dragging {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent), transparent 86%);
+}
+
+.uploadDropZone > strong {
+  font-size: 25px;
+}
+
+.uploadDropZone > span {
+  color: var(--muted);
+}
+
+.uploadPickerButtons {
+  display: grid;
+  grid-template-columns: repeat(2, 180px);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.hiddenFileInput {
+  display: none;
+}
+
+.uploadProgress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 70px;
+  gap: 12px;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.uploadProgress progress {
+  width: 100%;
+  height: 22px;
+  accent-color: var(--accent);
+}
+
+.uploadStatus {
+  margin: 14px 0 0;
+  color: var(--muted);
+}
+
+.uploadErrors {
+  margin: 12px 0 0;
+  color: var(--liked);
+}
+
+.uploadItems {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.uploadItem {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--panel-strong);
+}
+
+.uploadItem.imported,
+.uploadItem.duplicate {
+  border-color: var(--accent);
+}
+
+.uploadItem.error {
+  border-color: var(--liked);
+}
+
+.uploadItemHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.uploadItemHeader > span:first-child {
+  min-width: 0;
+  display: grid;
+}
+
+.uploadItemHeader strong,
+.uploadItemHeader small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uploadItemHeader small {
+  color: var(--muted);
+}
+
+.uploadResult {
+  max-width: 340px;
+  color: var(--accent);
+  text-align: right;
+}
+
+.uploadItem.error .uploadResult {
+  color: var(--liked);
+}
+
+.metadataGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metadataGrid label {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.metadataGrid input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 10px;
+  font-size: 18px;
+}
+
+.uploadFooter {
+  position: sticky;
+  bottom: -18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 14px;
+  align-items: center;
+  margin: 18px -18px -18px;
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.uploadFooter button {
+  background: var(--button-strong);
+  color: var(--button-strong-text);
+}
+
 .actionSheet header {
   position: sticky;
   top: -18px;
@@ -671,6 +1217,56 @@ h3 {
   gap: 10px;
 }
 
+.scaleSetting {
+  display: grid;
+  gap: 8px;
+}
+
+.ratingFilterSetting,
+.songRatingSetting {
+  display: grid;
+  gap: 8px;
+}
+
+.songRatingSetting {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.scaleButtons {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ratingFilterButtons,
+.songRatingButtons {
+  display: grid;
+  gap: 8px;
+}
+
+.ratingFilterButtons {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.songRatingButtons {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.ratingFilterButtons button,
+.songRatingButtons button {
+  min-width: 0;
+  padding: 4px 8px;
+}
+
+.songRatingButtons button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
 .userMenuActions {
   display: grid;
   gap: 10px;
@@ -684,12 +1280,23 @@ h3 {
   font-size: 25px;
 }
 
-.themeButtons button {
+.themeButtons button,
+.scaleButtons button,
+.ratingFilterButtons button {
   min-width: 0;
   font-size: 25px;
 }
 
-.themeButtons .selected {
+.scaleButtons button,
+.ratingFilterButtons button {
+  padding: 4px 8px;
+  font-size: 19px;
+}
+
+.themeButtons .selected,
+.scaleButtons .selected,
+.ratingFilterButtons .selected,
+.songRatingButtons .selected {
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent), transparent 80%);
 }
@@ -708,12 +1315,12 @@ h3 {
 
   .searchBar {
     height: 76px;
-    grid-template-columns: 34px minmax(0, 1fr) 108px 112px 120px 18px 120px;
+    grid-template-columns: 34px minmax(0, 1fr) 98px 98px 98px 76px 64px 112px;
     padding: 8px 12px;
   }
 
   .quickButtons {
-    grid-template-columns: 68px repeat(3, minmax(96px, 1fr));
+    grid-template-columns: 68px repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
 
@@ -731,5 +1338,126 @@ h3 {
 
   .loginScreen {
     padding-top: 12px;
+  }
+}
+
+@media (max-width: 700px) {
+  .searchBar {
+    height: 76px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px;
+    scrollbar-width: none;
+  }
+
+  .searchBar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .quickButtons {
+    flex: none;
+    display: flex;
+    gap: 8px;
+  }
+
+  .quickButtons button,
+  .searchBar > button {
+    flex: none;
+    min-width: 90px;
+  }
+
+  .searchBar > svg {
+    flex: none;
+  }
+
+  .searchField {
+    flex: 1 0 300px;
+  }
+
+  .backToResults {
+    min-width: 130px !important;
+  }
+
+  .repeatModeButton {
+    width: 58px;
+    min-width: 58px !important;
+  }
+
+  .deviceButton {
+    width: 58px;
+    min-width: 58px !important;
+  }
+
+  .userButtonSlot {
+    flex: none;
+    width: 80px;
+  }
+
+  .content {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .content::-webkit-scrollbar {
+    display: none;
+  }
+
+  .results,
+  .verlauf {
+    flex: 0 0 100%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .playerBar {
+    height: 82px;
+    grid-template-columns: 142px minmax(0, 1fr) 58px;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .transportControls {
+    grid-template-columns: 44px 50px 44px;
+    gap: 2px;
+  }
+
+  .transportControls button,
+  .likeNow {
+    min-width: 0;
+    min-height: 58px;
+  }
+
+  .nowPlayingHeader {
+    gap: 6px;
+  }
+
+  .clock {
+    font-size: 14px;
+  }
+
+  .remoteSheet {
+    overflow-y: auto;
+  }
+
+  .remoteColumns {
+    flex: none;
+    grid-template-columns: 1fr;
+  }
+
+  .remoteSearch,
+  .remoteQueue {
+    max-height: 520px;
+  }
+
+  .deviceNameRow,
+  .pairCodeEntry {
+    grid-template-columns: minmax(0, 1fr) 120px;
   }
 }

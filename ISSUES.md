@@ -18,6 +18,26 @@ Die App nutzt nur ein HTML-Audioelement, aber das Verhalten muss im Fahrzeug ver
 
 # Issues Erledigt
 
+## 79. Repeat-Modus
+
+Rechts vom Button [Zufall] soll ein neuer Repeat-Button erscheinen.
+Bei jedem Klick wechselt er zyklisch zwischen den Zuständen
+[Playlist], [Song], [Radio] und [NoRepeat].
+
+Der aktuelle Zustand wird ausschließlich durch ein sprechendes Symbol dargestellt:
+
+- Playlist: links ein fast geschlossener Kreispfeil im Uhrzeigersinn, rechts drei Querbalken
+- Song: links ein fast geschlossener Kreispfeil im Uhrzeigersinn, rechts ein Querbalken
+- Radio: ein symbolisiertes Radiogerät
+- NoRepeat: ein vertikaler Pfeil von oben nach unten
+
+Im Modus [Radio] wird die Wiedergabe beim Erreichen des Playlist-Endes mit Zufallssongs fortgesetzt.
+
+## 78. Zurück-Verhalten
+
+Wenn man auf [Künstler] klickt und dann auf einen Künstler in der Liste, sieht man seine Lieder.
+Klickt man dann auf [Zurück], wird wieder die Künstler-Liste angezeigt.
+
 ## 1. Auto Continue
 
 Auto continue, wenn app wieder gestartet wird (erneutes einsteigen in das fahzeug)

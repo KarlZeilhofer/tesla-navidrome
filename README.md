@@ -12,7 +12,7 @@ https://navidrome.example.com/tesla/
 
 - Large, predictable touch controls for a Tesla browser viewport.
 - Search input at the top, so it stays usable when the keyboard opens.
-- HTML audio playback through Navidrome/OpenSubsonic stream URLs.
+- HTML audio playback through Navidrome/OpenSubsonic stream URLs. Original audio is requested without forced transcoding so browser-supported formats such as FLAC are delivered unchanged.
 - Keep Tesla-specific login state independent from Navidrome's standard `/app` UI.
 - Provide a focused driving UI without the full Navidrome desktop interface.
 - Keep the project small enough to customize and publish as open source.
@@ -28,6 +28,21 @@ https://navidrome.example.com/tesla/
 - Special playlist search: typing `p`, `pl`, `play`, `playlist`, etc. lists all playlists while still showing other matching results.
 - `Liked` button loads all starred songs.
 - `Zufall` button loads 30 random songs into the result list.
+- Repeat button cycles through playlist, song, radio, LikedRadio, and no-repeat modes.
+- Radio mode continues with random songs when the playback queue reaches its end.
+- LikedRadio mode continues with randomly selected liked songs.
+- Song action dialogs can set or clear the current user's 1–5 star rating.
+- User settings can hide unrated and lower-rated songs with a per-user minimum rating of 2+, 3+, 4+, or 5 stars.
+- On phone-sized viewports, search results and the playback queue use the full content width and can be switched with a horizontal swipe.
+- Phone-sized viewports use a separate 2x scaling baseline, while desktop and Tesla retain the original scale factors.
+- Installable Android PWA with standalone display mode and dedicated app icons.
+- Offline app shell plus an automatic, oldest-first-limited audio cache of up to 1 GB for previously played songs.
+- Optional Connect-style device control: register a browser as a named player, pair controllers with a short-lived six-digit code, and remotely control playback, seek position, repeat mode, queue, mute, and player volume.
+- Paired family members search with their own Navidrome account while the selected tablet remains the audio output device.
+- Device button: click to toggle remote playback; hold or right-click to choose a device. The normal player UI shows the target queue and playback state while search stays local.
+- Upload preview flags exact source-file duplicates and possible existing title/artist matches; individual staged tracks can be removed before import.
+- Administrators can mark library songs as duplicates or remove individual songs. Removal requires dragging the confirmation arrow across the entire track. Files are moved to a protected server trash folder and automatically purged within three calendar months.
+- Desktop-only administrator upload dialog with drag-and-drop, folder selection, upload progress, embedded-tag and filename analysis, editable metadata, duplicate handling, and lossless metadata remuxing before import.
 - Result actions:
   - play a single song now
   - append to Verlauf
@@ -35,6 +50,7 @@ https://navidrome.example.com/tesla/
   - add to playlist
   - show album
   - show Künstler
+  - download the original song file
 - Result list bulk actions:
   - play all
   - insert all
@@ -82,6 +98,7 @@ The app talks to Navidrome through same-origin endpoints:
 - `/rest/stream.view`
 - `/rest/star.view`
 - `/rest/unstar.view`
+- `/rest/setRating.view`
 - `/rest/updatePlaylist.view`
 - `/rest/createPlaylist.view`
 
@@ -136,6 +153,10 @@ tesla-navidrome-deploy
 
 The production web server must route `/tesla/` to the built static files and proxy the existing Navidrome API paths on the same origin.
 
+Device control and desktop music uploads use the Node.js service in `server/control-server.mjs`. The deployment script installs it as the hardened `tesla-navidrome-control.service`; nginx proxies `/tesla-control/` to its local port. Persistent pairings contain only hashed random device secrets and are stored in `/var/lib/tesla-navidrome-control`.
+
+Uploads are restricted server-side to the usernames configured in `UPLOAD_ALLOWED_USERS` (currently `karl`). Files are streamed to a private staging directory, inspected with `music-metadata`, and shown for confirmation before import. Confirmed metadata is written with `ffmpeg -c copy`, so the audio stream is not re-encoded. Imported files are organized below `/srv/music/Uploads/<Albumartist>/<Album>/` and picked up by Navidrome's file watcher.
+
 ## Tesla Browser Notes
 
 The UI is tuned for a browser area around `1170x920` px. On narrower screens, the complete 1170 px design is scaled proportionally to the current viewport width so its original proportions remain intact. It remains usable when the keyboard reduces the visible height to about `1170x550` px.
@@ -168,9 +189,15 @@ The app stores local UI/playback state in local storage:
 
 - `teslaNavidromeState`: Verlauf, current index, playback position, and play state.
 - `teslaNavidromeTheme`: selected theme mode.
+- `teslaNavidromeScale`: selected UI scaling level.
+- `teslaNavidromeRepeatMode`: selected repeat mode.
+- `teslaNavidromeMinimumRating:<username>`: client-side minimum-rating filter for each saved user.
 - `teslaNavidromeSkipStats`: local skip statistics for removing unpopular songs from Verlauf.
 - `teslaNavidromeCurrentAuth`: currently active Tesla user session.
 - `teslaNavidromeUserProfiles`: locally saved Tesla user sessions for quick switching.
+- `teslaNavidromePlayerDevice`: local identity, name, and enabled state when this browser is offered as a remote player.
+- `teslaNavidromePlayerVolume` and `teslaNavidromePlayerMuted`: player-level volume state.
+- `teslaNavidromeControlPairings`: controller tokens for explicitly paired remote players.
 
 Login state is intentionally local to this app. Logging in or out of `/tesla/` should not log the same browser in or out of Navidrome's standard `/app` interface.
 

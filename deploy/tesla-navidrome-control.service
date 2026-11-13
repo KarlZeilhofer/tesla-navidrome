@@ -1,0 +1,33 @@
+[Unit]
+Description=Tesla Navidrome control and music upload service
+After=network-online.target navidrome.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tesla-navidrome-control
+Group=tesla-navidrome-control
+WorkingDirectory=/opt/tesla-navidrome-control
+Environment=NODE_ENV=production
+Environment=CONTROL_HOST=127.0.0.1
+Environment=CONTROL_PORT=4781
+Environment=CONTROL_STATE_FILE=/var/lib/tesla-navidrome-control/state.json
+Environment=NAVIDROME_URL=http://127.0.0.1:4533
+Environment=CONTROL_ALLOWED_ORIGIN=https://navidrome.alpenchat.at
+Environment=UPLOAD_STAGING_FOLDER=/var/lib/tesla-navidrome-control/uploads
+Environment=MUSIC_UPLOAD_FOLDER=/srv/music/Uploads
+Environment=UPLOAD_ALLOWED_USERS=karl
+Environment=MAX_UPLOAD_FILE_BYTES=1073741824
+Environment=FFMPEG_PATH=/usr/bin/ffmpeg
+ExecStart=/usr/local/node-v24.16.0/bin/node /opt/tesla-navidrome-control/control-server.mjs
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/tesla-navidrome-control /srv/music/Uploads
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

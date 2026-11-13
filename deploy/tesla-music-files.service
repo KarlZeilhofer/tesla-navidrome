@@ -1,0 +1,17 @@
+[Unit]
+Description=Tesla Navidrome confirmed music file removal
+After=navidrome.service
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/sbin/tesla-navidrome-music-files --serve
+RuntimeDirectory=tesla-music-files
+RuntimeDirectoryMode=0755
+Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/music /srv/tesla-navidrome-trash /run/tesla-music-files
+
+[Install]
+WantedBy=multi-user.target

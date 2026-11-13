@@ -6,15 +6,20 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test"
   },
   "dependencies": {
+    "busboy": "^1.6.0",
+    "music-metadata": "^12.5.0",
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
     "@vitejs/plugin-react": "^5.1.1",
-    "vite": "^7.3.2",
-    "typescript": "^5.9.3",
+    "lucide-react": "^0.555.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "lucide-react": "^0.555.0"
-  },
-  "devDependencies": {}
+    "typescript": "^5.9.3",
+    "vite": "^7.3.2"
+  }
 }
