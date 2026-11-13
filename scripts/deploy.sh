@@ -17,6 +17,7 @@ install -m 0644 package.json package-lock.json /opt/tesla-navidrome-control/
 PATH=/usr/local/node-v24.16.0/bin:$PATH npm ci --omit=dev --ignore-scripts --prefix /opt/tesla-navidrome-control
 install -m 0644 server/control-server.mjs /opt/tesla-navidrome-control/control-server.mjs
 install -m 0644 server/radio-api.mjs /opt/tesla-navidrome-control/radio-api.mjs
+install -m 0644 server/write_ogg_tags.py /opt/tesla-navidrome-control/write_ogg_tags.py
 RADIO_RESTART=0
 for radio_file in radio_server.py radio_engine.py; do
   if ! cmp -s "server/$radio_file" "/opt/tesla-navidrome-radio/$radio_file"; then RADIO_RESTART=1; fi

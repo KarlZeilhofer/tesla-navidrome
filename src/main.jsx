@@ -30,6 +30,7 @@ import {
 import "./styles.css"
 import { controlAuth, createControlConnection, createDeviceIdentity } from "./control.js"
 import { sliderToVolume, volumeToSlider } from "./volume.js"
+import { collectDroppedFiles, isAudioFile, uploadBatches } from "./upload-files.js"
 
 const CLIENT = "TeslaNavidrome"
 const API_VERSION = "1.16.1"
@@ -2539,25 +2540,34 @@ function UploadDialog({ auth, onClose }) {
 
   async function addFiles(fileList) {
     if (isUploading || isImporting) return
-    const files = [...fileList].filter((file) => file.size > 0)
-    if (!files.length) return
+    const files = [...fileList].filter((file) => file.size > 0 && isAudioFile(file))
+    if (!files.length) { setStatus("Keine unterstützten Audiodateien im Ordner gefunden."); return }
     setIsUploading(true)
     setUploadProgress(0)
     setStatus(`Lade ${files.length} ${files.length === 1 ? "Datei" : "Dateien"} hoch …`)
     setErrors([])
     try {
-      const result = await analyzeAudioFiles(files, auth, setUploadProgress)
-      setUploads((current) => {
-        const seen = new Set(current.map((item) => item.fingerprint))
-        const additions = (result.files || []).map((item) => {
-          const duplicateInBatch = seen.has(item.fingerprint)
-          seen.add(item.fingerprint)
-          return { ...item, duplicateInBatch }
+      const batches = uploadBatches(files)
+      const totalBytes = files.reduce((sum, file) => sum + file.size, 0)
+      let completedBytes = 0, analyzedCount = 0
+      for (const batch of batches) {
+        const batchBytes = batch.reduce((sum, file) => sum + file.size, 0)
+        setStatus(`Lade Dateien hoch und lese Metadaten … ${analyzedCount} / ${files.length}`)
+        const result = await analyzeAudioFiles(batch, auth, (percent) => setUploadProgress(Math.round(100 * (completedBytes + batchBytes * percent / 100) / totalBytes)))
+        setUploads((current) => {
+          const seen = new Set(current.map((item) => item.fingerprint))
+          const additions = (result.files || []).map((item) => {
+            const duplicateInBatch = seen.has(item.fingerprint)
+            seen.add(item.fingerprint)
+            return { ...item, duplicateInBatch }
+          })
+          return [...current, ...additions]
         })
-        return [...current, ...additions]
-      })
-      setErrors(result.errors || [])
-      setStatus(`${result.files?.length || 0} ${result.files?.length === 1 ? "Datei analysiert" : "Dateien analysiert"}.`)
+        setErrors((current) => [...current, ...(result.errors || [])])
+        analyzedCount += result.files?.length || 0
+        completedBytes += batchBytes
+      }
+      setStatus(`${analyzedCount} ${analyzedCount === 1 ? "Datei analysiert" : "Dateien analysiert"}.`)
     } catch (uploadError) {
       setStatus(uploadError.message)
     } finally {
@@ -2607,6 +2617,8 @@ function UploadDialog({ auth, onClose }) {
     setIsImporting(true)
     setStatus("Importiere Musik …")
     try {
+      let failed = 0
+      for (let offset = 0; offset < pendingUploads.length; offset += 100) {
       const response = await fetch("/tesla-control/upload/import", {
         method: "POST",
         headers: {
@@ -2616,7 +2628,7 @@ function UploadDialog({ auth, onClose }) {
           "X-Navidrome-Salt": auth.salt,
         },
         body: JSON.stringify({
-          files: pendingUploads.map((upload) => ({ id: upload.id, metadata: upload.metadata })),
+          files: pendingUploads.slice(offset, offset + 100).map((upload) => ({ id: upload.id, metadata: upload.metadata })),
         }),
       })
       const result = await response.json()
@@ -2625,7 +2637,8 @@ function UploadDialog({ auth, onClose }) {
         ...current,
         ...Object.fromEntries((result.results || []).map((item) => [item.id, item])),
       }))
-      const failed = (result.results || []).filter((item) => item.status === "error").length
+      failed += (result.results || []).filter((item) => item.status === "error").length
+      }
       setStatus(failed ? `${failed} Dateien konnten nicht importiert werden.` : "Import abgeschlossen. Navidrome liest die neuen Songs ein.")
     } catch (importError) {
       setStatus(importError.message)
@@ -2634,10 +2647,13 @@ function UploadDialog({ auth, onClose }) {
     }
   }
 
-  function handleDrop(event) {
+  async function handleDrop(event) {
     event.preventDefault()
     setIsDragging(false)
-    addFiles(event.dataTransfer.files)
+    if (isUploading || isImporting) return
+    setStatus("Lese Dateien und Unterordner …")
+    try { await addFiles(await collectDroppedFiles(event.dataTransfer)) }
+    catch (error) { setStatus(`Ordner konnte nicht gelesen werden: ${error.message}`) }
   }
 
   return (
@@ -2661,7 +2677,7 @@ function UploadDialog({ auth, onClose }) {
           onDrop={handleDrop}
         >
           <Upload size={54} />
-          <strong>Audiodateien hierher ziehen</strong>
+          <strong>Audiodateien oder Ordner hierher ziehen</strong>
           <span>MP3, FLAC, M4A, AAC, OGG, Opus, WAV, WMA und WavPack</span>
           <div className="uploadPickerButtons">
             <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>Dateien wählen</button>

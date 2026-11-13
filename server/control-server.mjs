@@ -5,6 +5,7 @@ import fs from "node:fs/promises"
 import http from "node:http"
 import net from "node:net"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { pipeline } from "node:stream/promises"
 import Busboy from "busboy"
 import { parseFile } from "music-metadata"
@@ -26,6 +27,8 @@ const UPLOAD_ALLOWED_USERS = new Set(
     .filter(Boolean),
 )
 const FFMPEG_PATH = process.env.FFMPEG_PATH || "/usr/bin/ffmpeg"
+const AUDIO_TAG_PYTHON = process.env.AUDIO_TAG_PYTHON || "/opt/tesla-navidrome-radio-venv/bin/python"
+const OGG_TAG_WRITER = fileURLToPath(new URL("./write_ogg_tags.py", import.meta.url))
 const MAX_UPLOAD_FILE_BYTES = Number(process.env.MAX_UPLOAD_FILE_BYTES || 1024 * 1024 * 1024)
 const MAX_UPLOAD_FILES = 100
 const UPLOAD_RETENTION_MS = 24 * 60 * 60 * 1000
@@ -209,6 +212,7 @@ async function handleAnalyzeUpload(request, response, username) {
   try {
     busboy = Busboy({
       headers: request.headers,
+      defParamCharset: "utf8",
       limits: { files: MAX_UPLOAD_FILES, fileSize: MAX_UPLOAD_FILE_BYTES, fields: 20 },
     })
   } catch (parseError) {
@@ -356,6 +360,24 @@ async function availableDestination(basePath) {
   throw new Error("Kein freier Dateiname gefunden.")
 }
 
+function writeAudioMetadata(inputPath, outputPath, metadata, extension) {
+  if (![".ogg", ".opus"].includes(extension)) return runFfmpeg(inputPath, outputPath, metadata)
+  return new Promise((resolve, reject) => {
+    const child = spawn(AUDIO_TAG_PYTHON, [OGG_TAG_WRITER, inputPath, outputPath], { stdio: ["pipe", "ignore", "pipe"] })
+    let stderr = ""
+    const timeout = setTimeout(() => child.kill("SIGKILL"), 5 * 60 * 1000)
+    child.stderr.on("data", (chunk) => { if (stderr.length < 16_000) stderr += chunk.toString() })
+    child.stdin.on("error", () => {})
+    child.stdin.end(JSON.stringify(metadata))
+    child.on("error", (error) => { clearTimeout(timeout); reject(error) })
+    child.on("close", (code) => {
+      clearTimeout(timeout)
+      if (code === 0) resolve()
+      else reject(new Error(stderr.trim() || "Ogg-Metadaten konnten nicht gespeichert werden."))
+    })
+  })
+}
+
 async function importUploadedFile(item, username) {
   const uploadId = cleanText(item?.id, 80)
   if (!/^[0-9a-f-]{36}$/i.test(uploadId)) throw new Error("Ungültige Upload-ID.")
@@ -388,7 +410,7 @@ async function importUploadedFile(item, username) {
 
   const temporaryPath = path.join(destinationFolder, `.uploading-${crypto.randomUUID()}${manifest.extension}`)
   try {
-    await runFfmpeg(manifest.stagedPath, temporaryPath, metadata)
+    await writeAudioMetadata(manifest.stagedPath, temporaryPath, metadata, manifest.extension)
     await fs.chmod(temporaryPath, 0o644)
     await fs.rename(temporaryPath, destination)
     uploadIndex.files[manifest.sha256] = {

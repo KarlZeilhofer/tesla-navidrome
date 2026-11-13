@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { spawn } from "node:child_process"
+import { spawn, execFileSync } from "node:child_process"
 import fs from "node:fs/promises"
 import http from "node:http"
 import os from "node:os"
@@ -94,6 +94,7 @@ test("pairs a controller and relays state and commands", async (context) => {
       MUSIC_UPLOAD_FOLDER: path.join(temporaryDirectory, "music"),
       UPLOAD_ALLOWED_USERS: "karl",
       FFMPEG_PATH: "/usr/bin/ffmpeg",
+      AUDIO_TAG_PYTHON: process.env.AUDIO_TAG_PYTHON || "/usr/bin/python3",
     },
     stdio: ["ignore", "pipe", "pipe"],
   })
@@ -223,6 +224,28 @@ test("pairs a controller and relays state and commands", async (context) => {
     (await fs.readdir(path.dirname(importedPath))).filter((filename) => filename.endsWith(".wav")),
     ["01 - Test Song.wav"],
   )
+
+  for (const [extension, codec] of [["ogg", "libvorbis"], ["opus", "libopus"]]) {
+    const fixture = path.join(temporaryDirectory, `cover.${extension}`)
+    execFileSync("/usr/bin/ffmpeg", ["-nostdin", "-v", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=1", "-c:a", codec, fixture])
+    execFileSync(process.env.AUDIO_TAG_PYTHON || "/usr/bin/python3", ["-c", "from mutagen import File; from mutagen.flac import Picture; import sys,base64; p=Picture(); p.type=3; p.mime='image/png'; p.data=open(sys.argv[2],'rb').read(); a=File(sys.argv[1]); a['metadata_block_picture']=[base64.b64encode(p.write()).decode('ascii')]; a.save()", fixture, path.resolve("public/icons/icon-192.png")])
+    const form = new FormData()
+    form.append("files", new Blob([await fs.readFile(fixture)]), `19 Der König kehrt zurück.${extension}`)
+    const analysisResponse = await fetch(`http://127.0.0.1:${CONTROL_PORT}/upload/analyze`, { method: "POST", headers: uploadHeaders, body: form })
+    assert.equal(analysisResponse.status, 200)
+    const analysis = await analysisResponse.json()
+    assert.equal(analysis.files[0].originalName, `19 Der König kehrt zurück.${extension}`)
+    assert.equal(analysis.files[0].embeddedCover, true)
+    const metadata = { ...analysis.files[0].metadata, title: "Der König kehrt zurück", artist: "Künstler", albumArtist: "Künstler", album: "Löwen", track: 19 }
+    const response = await fetch(`http://127.0.0.1:${CONTROL_PORT}/upload/import`, { method: "POST", headers: { ...uploadHeaders, "Content-Type": "application/json" }, body: JSON.stringify({ files: [{ id: analysis.files[0].id, metadata }] }) })
+    const result = await response.json()
+    assert.equal(result.results[0].status, "imported", JSON.stringify(result))
+    const importedFile = path.join(temporaryDirectory, "music", "Künstler", "Löwen", `19 - Der König kehrt zurück.${extension}`)
+    const tags = await parseFile(importedFile)
+    assert.equal(tags.common.title, metadata.title)
+    assert.equal(tags.common.artist, "Künstler")
+    assert.deepEqual(tags.common.picture[0].data, (await parseFile(fixture)).common.picture[0].data)
+  }
 
   player.close()
   controller.close()

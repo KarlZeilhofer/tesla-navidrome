@@ -157,7 +157,9 @@ The production web server must route `/tesla/` to the built static files and pro
 
 Device control and desktop music uploads use the Node.js service in `server/control-server.mjs`. The deployment script installs it as the hardened `tesla-navidrome-control.service`; nginx proxies `/tesla-control/` to its local port. Persistent pairings contain only hashed random device secrets and are stored in `/var/lib/tesla-navidrome-control`.
 
-Uploads are restricted server-side to the usernames configured in `UPLOAD_ALLOWED_USERS` (currently `karl`). Files are streamed to a private staging directory, inspected with `music-metadata`, and shown for confirmation before import. Confirmed metadata is written with `ffmpeg -c copy`, so the audio stream is not re-encoded. Imported files are organized below `/srv/music/Uploads/<Albumartist>/<Album>/` and picked up by Navidrome's file watcher.
+Uploads are restricted server-side to the usernames configured in `UPLOAD_ALLOWED_USERS` (currently `karl`). Files are streamed to a private staging directory, inspected with `music-metadata`, and shown for confirmation before import. Ogg/Vorbis and Opus comments are updated with Mutagen on a copy, preserving embedded artwork, lyrics, custom comments and compressed audio packets. Other formats use `ffmpeg -c copy`; audio is never re-encoded. Imported files are organized below `/srv/music/Uploads/<Albumartist>/<Album>/` and picked up by Navidrome's file watcher.
+
+Dropped folders are read recursively, including paginated browser directory entries. Uploads are divided into batches of up to 20 files / 256 MiB (single larger files travel alone), and imports into batches of 100. Non-audio sidecar files are ignored. Multipart filenames use UTF-8 so umlauts survive both upload and filename-based metadata detection.
 
 ## Smart Radio analysis
 
